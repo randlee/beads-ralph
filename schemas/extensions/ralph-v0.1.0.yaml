@@ -1,0 +1,481 @@
+# beads-ralph Extensions to Beads Schema
+# Version: v0.1.0 (planned MVP)
+# Based on: docs/schema.md
+# Last verified: 2026-02-08
+
+# Extension mechanism: metadata JSON column
+extension_mechanism:
+  field: "metadata"
+  format: "JSON object"
+  pros:
+    - "Type-safe with pydantic validation"
+    - "Purpose-built extension point (GH#1406)"
+    - "Clean separation from human text"
+    - "Easy to query with JSON SQL operators"
+  cons:
+    - "Requires metadata column (added in beads migration 042)"
+  note: |
+    beads-ralph uses the official metadata JSON column as the extension point.
+    All 22 custom fields are stored as structured JSON in the metadata column.
+    This is the recommended approach per beads core design.
+
+# beads-ralph custom issue types
+custom_issue_types:
+  beads-ralph-work:
+    description: "Standard work beads for development sprints"
+    metadata_required: true
+
+  beads-ralph-merge:
+    description: "Merge beads for integrating parallel branches"
+    metadata_required: true
+    special_field: "branches_to_merge"
+
+# Complete metadata schema (22 fields)
+metadata_fields:
+  # Work Identification (5 fields)
+  worktree_path:
+    type: string
+    required: true
+    description: "Absolute path to worktree on disk"
+    validation: "Should be absolute path (not enforced in Sprint 1.1)"
+    example: "/Users/dev/projects/my-app-worktrees/main/1-2-auth-api"
+
+  branch:
+    type: string
+    required: true
+    description: "Branch name for this work"
+    validation: "Should match ^[a-zA-Z0-9/_-]+$ (not enforced in Sprint 1.1)"
+    example: "feature/1-2-auth-api"
+
+  source_branch:
+    type: string
+    required: true
+    description: "Branch to create worktree from"
+    example: "develop"
+
+  phase:
+    type: string
+    required: true
+    pattern: "^[0-9]+[a-z]*$"
+    description: "Phase number"
+    examples: ["1", "2", "3a", "3b", "12", "3ab"]
+    validation: "Enforced by pydantic field validator"
+
+  sprint:
+    type: string
+    required: true
+    pattern: "^[0-9]+[a-z]*\\.[0-9]+[a-z]*$"
+    description: "Sprint number"
+    examples: ["1.1", "3a.2", "3b.2a", "3b.2b"]
+    validation: "Enforced by pydantic field validator"
+
+  # Plan Tracking (3 fields)
+  plan_file:
+    type: string
+    required: true
+    description: "Path to original plan file"
+    example: "pm/2026-02-08-implementation-plan.md"
+
+  plan_section:
+    type: string
+    required: true
+    description: "Section identifier in plan (line numbers or heading anchor)"
+    example: "## Phase 1 > ### Sprint 1.2: User Authentication"
+
+  plan_sprint_id:
+    type: string
+    required: true
+    description: "Sprint ID as written in plan (for back-annotation)"
+    example: "1.2"
+
+  # Merge-specific (1 optional field)
+  branches_to_merge:
+    type: string[]
+    required: false
+    description: "Branches to merge (merge beads only)"
+    example: ["feature/1-2a-auth-api", "feature/1-2b-user-profile"]
+    used_by: "beads-ralph-merge issue type only"
+
+  # Dev Agent Configuration (3 fields)
+  dev_agent_path:
+    type: string
+    required: true
+    description: "Path to dev agent definition"
+    example: ".claude/agents/backend-dev.md"
+    validation: "Should be non-empty (not enforced in Sprint 1.1)"
+
+  dev_model:
+    type: string
+    required: true
+    enum: ["sonnet", "opus", "haiku"]
+    description: "Model for dev agent"
+    validation: "Enforced by pydantic field validator"
+
+  dev_prompts:
+    type: string[]
+    required: true
+    min_length: 1
+    description: "Array of prompts for dev agent"
+    validation: "Non-empty array enforced by pydantic"
+    example:
+      - "Implement user authentication API endpoints in the backend service."
+      - "Follow existing patterns in services/auth/. Use bcrypt for password hashing."
+      - "Add integration tests for login and signup endpoints."
+
+  # QA Agent Configuration (1 field with nested structure)
+  qa_agents:
+    type: QAAgent[]
+    required: true
+    min_length: 1
+    description: "Array of QA agent specifications"
+    validation: "Non-empty array enforced by pydantic"
+
+# Nested QAAgent structure
+qa_agent_structure:
+  agent_path:
+    type: string
+    required: true
+    description: "Path to QA agent definition"
+    example: ".claude/agents/qa-unit-tests.md"
+
+  model:
+    type: string
+    required: true
+    enum: ["sonnet", "opus", "haiku"]
+    description: "Model for QA agent"
+
+  prompt:
+    type: string
+    required: true
+    description: "Prompt for QA agent"
+    example: "Run pytest with coverage. Verify new endpoints have >80% coverage."
+
+  input_schema:
+    type: object
+    required: false
+    description: "JSON Schema for QA input (optional)"
+    example:
+      type: "object"
+      properties:
+        worktree_path:
+          type: "string"
+        branch:
+          type: "string"
+        changed_files:
+          type: "array"
+          items:
+            type: "string"
+
+  output_schema:
+    type: object
+    required: true
+    description: "JSON Schema for QA output (required)"
+    validation: "Must have 'status' and 'message' properties"
+    example:
+      type: "object"
+      properties:
+        status:
+          enum: ["pass", "fail", "stop"]
+        message:
+          type: "string"
+        details:
+          type: "object"
+      required: ["status", "message"]
+
+# QA Output Status Values
+qa_status_values:
+  pass:
+    description: "Validation succeeded, continue to next step"
+    action: "Proceed to PR creation"
+
+  fail:
+    description: "Validation failed, dev agent should fix and retry"
+    action: "Return feedback to dev agent, increment attempt_count"
+
+  stop:
+    description: "Critical failure, do not retry"
+    action: "Stop dev-QA loop, escalate to human"
+    examples: ["security vulnerability", "unrecoverable error"]
+
+# Retry Logic (2 fields)
+retry_fields:
+  max_retry_attempts:
+    type: int
+    required: false
+    default: 3
+    description: "Maximum dev/QA retry loop iterations"
+    validation: "Must be >= 1"
+
+  attempt_count:
+    type: int
+    required: false
+    default: 0
+    description: "Current retry attempt count"
+    validation: "Must be >= 0"
+
+# Agent Execution Tracking (4 fields)
+execution_tracking_fields:
+  scrum_master_session_id:
+    type: string
+    required: false
+    description: "Claude session ID of scrum-master (for resurrection)"
+    example: "proj_abc123xyz"
+
+  dev_agent_session_id:
+    type: string
+    required: false
+    description: "Claude session ID of dev agent that did the work"
+    example: "proj_def456uvw"
+
+  dev_agent_executions:
+    type: DevExecution[]
+    required: false
+    default: []
+    description: "History of all dev agent execution attempts"
+
+  qa_agent_executions:
+    type: QAExecution[]
+    required: false
+    default: []
+    description: "History of all QA agent executions"
+
+# Nested DevExecution structure
+dev_execution_structure:
+  attempt:
+    type: int
+    required: true
+    description: "Attempt number (1, 2, 3...)"
+    validation: "Must be >= 1"
+
+  session_id:
+    type: string
+    required: true
+    description: "Claude session ID"
+
+  agent_path:
+    type: string
+    required: true
+    description: "Path to dev agent"
+
+  model:
+    type: string
+    required: true
+    enum: ["sonnet", "opus", "haiku"]
+    description: "Model used for dev agent"
+
+  started_at:
+    type: datetime
+    required: true
+    format: "ISO 8601"
+    description: "Execution start time"
+
+  completed_at:
+    type: datetime
+    required: true
+    format: "ISO 8601"
+    description: "Execution completion time"
+
+  status:
+    type: string
+    required: true
+    enum: ["completed", "failed", "timeout"]
+    description: "Execution status"
+
+  feedback_from_qa:
+    type: string
+    required: false
+    description: "QA feedback if this was a retry"
+
+# Nested QAExecution structure
+qa_execution_structure:
+  attempt:
+    type: int
+    required: true
+    description: "Which dev attempt this validated"
+    validation: "Must be >= 1"
+
+  session_id:
+    type: string
+    required: true
+    description: "Claude session ID"
+
+  agent_path:
+    type: string
+    required: true
+    description: "Path to QA agent"
+
+  model:
+    type: string
+    required: true
+    enum: ["sonnet", "opus", "haiku"]
+    description: "Model used for QA agent"
+
+  started_at:
+    type: datetime
+    required: true
+    format: "ISO 8601"
+    description: "Execution start time"
+
+  completed_at:
+    type: datetime
+    required: true
+    format: "ISO 8601"
+    description: "Execution completion time"
+
+  status:
+    type: string
+    required: true
+    enum: ["pass", "fail", "stop"]
+    description: "QA status"
+
+  message:
+    type: string
+    required: true
+    description: "QA message"
+
+  details:
+    type: object
+    required: true
+    default: {}
+    description: "Agent-specific result details"
+
+# Output Tracking (3 fields)
+output_tracking_fields:
+  pr_url:
+    type: string
+    required: false
+    description: "GitHub PR URL (populated after creation)"
+    example: "https://github.com/user/repo/pull/123"
+
+  pr_number:
+    type: int
+    required: false
+    description: "GitHub PR number"
+    example: 123
+
+  scrum_result:
+    type: ScrumResult
+    required: false
+    description: "Final result from scrum-master"
+
+# Nested ScrumResult structure
+scrum_result_structure:
+  bead_id:
+    type: string
+    required: true
+    description: "Bead ID being worked on"
+
+  success:
+    type: bool
+    required: true
+    description: "Overall success status"
+
+  pr_url:
+    type: string
+    required: false
+    description: "PR URL if created"
+
+  pr_number:
+    type: int
+    required: false
+    description: "PR number if created"
+
+  bead_updated:
+    type: bool
+    required: true
+    description: "Whether bead status was updated"
+
+  attempt_count:
+    type: int
+    required: true
+    description: "Final retry attempt count"
+    validation: "Must be >= 0"
+
+  qa_results:
+    type: QAResult[]
+    required: true
+    default: []
+    description: "Results from all QA agents"
+
+  error:
+    type: string
+    required: false
+    description: "Error message if failed"
+
+  fatal:
+    type: bool
+    required: true
+    description: "If true, stop ralph loop"
+
+# Nested QAResult structure (inside ScrumResult)
+qa_result_structure:
+  agent_path:
+    type: string
+    required: true
+    description: "Path to QA agent"
+
+  status:
+    type: string
+    required: true
+    enum: ["pass", "fail", "stop"]
+    description: "QA status"
+
+  message:
+    type: string
+    required: true
+    description: "QA message"
+
+  details:
+    type: object
+    required: true
+    default: {}
+    description: "Agent-specific result details"
+
+# Pydantic implementation
+pydantic_models:
+  location: "scripts/bead_schema.py"
+  created: "Sprint 1.1"
+  models:
+    - "Bead (complete bead with core + metadata)"
+    - "BeadMetadata (all 22 custom fields)"
+    - "QAAgent"
+    - "DevExecution"
+    - "QAExecution"
+    - "ScrumResult"
+    - "QAResult"
+  validation:
+    - "Phase pattern: ^[0-9]+[a-z]*$"
+    - "Sprint pattern: ^[0-9]+[a-z]*\\.[0-9]+[a-z]*$"
+    - "Model enums: sonnet, opus, haiku"
+    - "Status enums: open, in_progress, closed, blocked"
+    - "QA status: pass, fail, stop"
+    - "Non-empty arrays for dev_prompts, qa_agents"
+  validator_cli: "scripts/validate-bead-schema.py"
+
+# Integration with base beads
+integration:
+  storage_location: "metadata JSON column in issues table"
+  access_method: "bd show <id> --json | jq .metadata"
+  update_method: "bd update <id> --metadata '{...}'"
+  query_method: "SQLite JSON operators (json_extract, etc.)"
+
+# Integration with gastown
+gastown_integration:
+  conflicts: "None - different extension mechanisms"
+  gastown_uses: "description field (key:value encoding)"
+  ralph_uses: "metadata field (JSON object)"
+  compatibility: |
+    beads-ralph and gastown can coexist without conflicts. However:
+    - Gastown's Issue struct cannot access ralph's metadata
+    - Ralph should avoid putting data in description field
+    - If integration needed, use `bd show --json` directly
+
+# Summary
+summary:
+  total_fields: 22
+  required_fields: 11
+  optional_fields: 11
+  nested_structures: 5
+  custom_issue_types: 2
+  validation_coverage: "95% (Sprint 1.1 QA report)"
+  pydantic_version: "v2.x with strict mode"

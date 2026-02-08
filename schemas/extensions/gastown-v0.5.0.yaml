@@ -1,0 +1,329 @@
+# Gastown Extensions to Beads Schema
+# Version: v0.5.0-329-g7cf6e82d
+# Commit: 7cf6e82dcca510c4e1e62d2c9fe3ef1e31139386
+# Repo: https://github.com/steveyegge/gastown.git
+# Last verified: 2026-02-08
+
+# IMPORTANT: Gastown does NOT use the metadata JSON column
+# Instead, gastown uses DESCRIPTION-FIELD ENCODING (key:value lines)
+
+extension_mechanism:
+  field: "description"
+  format: "key: value lines in freetext"
+  parser_approach: "Line-by-line regex parsing"
+  pros:
+    - "Works without schema changes"
+    - "Backwards compatible with any beads version"
+  cons:
+    - "Fragile parsing (conflicts with human text)"
+    - "No type safety"
+    - "Difficult to query"
+  note: |
+    Gastown stores structured data as `key: value` lines within the description
+    field. Each bead type has its own field parser (AgentFields, MRFields, etc.).
+
+# Gastown custom issue types
+custom_issue_types:
+  - agent      # Agent identity beads
+  - role       # Role definition beads (deprecated)
+  - rig        # Rig identity beads
+  - convoy     # Convoy (batch work) beads
+  - slot       # Slot (resource lock) beads
+  - queue      # Queue beads
+  - event      # Event beads
+  - message    # Message beads
+  - molecule   # Molecule (composite work) beads
+  - gate       # Gate (synchronization) beads
+  - merge-request  # Merge request beads
+
+# Gastown label prefixes
+label_prefixes:
+  - "gt:"       # Type labels (gt:agent, gt:merge-request, etc.)
+  - "severity:" # Escalation severity (severity:critical, severity:high, etc.)
+  - "from:"     # Message sender
+  - "thread:"   # Thread ID
+  - "queue:"    # Queue name
+
+# Agent Bead Fields (description-encoded)
+# Source: internal/beads/beads_agent.go lines 36-46
+agent_fields:
+  role_type:
+    type: string
+    values: ["polecat", "witness", "refinery", "deacon", "mayor", "crew"]
+    description: "Agent role type"
+
+  rig:
+    type: string
+    description: "Rig name (empty for global agents)"
+
+  agent_state:
+    type: string
+    values: ["spawning", "working", "done", "stuck"]
+    description: "Current agent state"
+
+  hook_bead:
+    type: string
+    description: "Currently pinned work bead ID"
+
+  cleanup_status:
+    type: string
+    values: ["clean", "has_uncommitted", "has_stash", "has_unpushed"]
+    description: "Git working tree status"
+
+  active_mr:
+    type: string
+    description: "Current merge request bead ID"
+
+  notification_level:
+    type: string
+    values: ["verbose", "normal", "muted"]
+    description: "Agent notification preference"
+
+# Merge Request Bead Fields (description-encoded)
+# Source: internal/beads/fields.go lines 183-201
+merge_request_fields:
+  branch:
+    type: string
+    description: "Source branch name"
+
+  target:
+    type: string
+    description: "Target branch (e.g., 'main')"
+
+  source_issue:
+    type: string
+    description: "Work item being merged"
+
+  worker:
+    type: string
+    description: "Who did the work"
+
+  rig:
+    type: string
+    description: "Which rig"
+
+  merge_commit:
+    type: string
+    description: "SHA of merge commit (on close)"
+
+  close_reason:
+    type: string
+    values: ["merged", "rejected", "conflict", "superseded"]
+    description: "Reason for closure"
+
+  agent_bead:
+    type: string
+    description: "Agent bead ID that created this MR"
+
+  retry_count:
+    type: int
+    description: "Conflict-resolution cycles"
+
+  last_conflict_sha:
+    type: string
+    description: "SHA of main when conflict occurred"
+
+  conflict_task_id:
+    type: string
+    description: "Link to conflict-resolution task"
+
+  convoy_id:
+    type: string
+    description: "Parent convoy ID"
+
+  convoy_created_at:
+    type: string
+    format: "ISO 8601"
+    description: "Convoy creation time"
+
+# Attachment Fields (description-encoded)
+# Source: internal/beads/fields.go lines 20-26
+attachment_fields:
+  attached_molecule:
+    type: string
+    description: "Root issue ID of attached molecule"
+
+  attached_at:
+    type: string
+    format: "ISO 8601"
+    description: "Attachment timestamp"
+
+  attached_args:
+    type: string
+    description: "Natural language args"
+
+  dispatched_by:
+    type: string
+    description: "Agent ID that dispatched work"
+
+  no_merge:
+    type: bool
+    description: "Skip merge queue if true"
+
+# Escalation Fields (description-encoded)
+# Source: internal/beads/beads_escalation.go lines 15-30
+escalation_fields:
+  severity:
+    type: string
+    values: ["critical", "high", "medium", "low"]
+    description: "Escalation severity"
+
+  reason:
+    type: string
+    description: "Why escalated"
+
+  source:
+    type: string
+    description: "Source identifier"
+
+  escalated_by:
+    type: string
+    description: "Agent address"
+
+  escalated_at:
+    type: string
+    format: "ISO 8601"
+    description: "Escalation timestamp"
+
+  acked_by:
+    type: string
+    description: "Agent that acknowledged"
+
+  acked_at:
+    type: string
+    format: "ISO 8601"
+    description: "When acknowledged"
+
+  closed_by:
+    type: string
+    description: "Agent that closed"
+
+  closed_reason:
+    type: string
+    description: "Resolution reason"
+
+  related_bead:
+    type: string
+    description: "Optional related bead ID"
+
+  original_severity:
+    type: string
+    description: "Before re-escalation"
+
+  reescalation_count:
+    type: int
+    description: "Re-escalation count"
+
+  last_reescalated_at:
+    type: string
+    format: "ISO 8601"
+    description: "When last re-escalated"
+
+  last_reescalated_by:
+    type: string
+    description: "Who last re-escalated"
+
+# Queue Fields (description-encoded)
+# Source: internal/beads/beads_queue.go lines 14-26
+queue_fields:
+  queue_name:
+    type: string
+    description: "Queue name"
+
+  max_size:
+    type: int
+    description: "Maximum queue size"
+
+  current_size:
+    type: int
+    description: "Current items in queue"
+
+  processing_strategy:
+    type: string
+    values: ["fifo", "lifo", "priority"]
+    description: "Queue processing order"
+
+  created_by:
+    type: string
+    description: "Agent that created queue"
+
+  paused:
+    type: bool
+    description: "Whether queue is paused"
+
+# Rig Fields (description-encoded)
+# Source: internal/beads/beads_rig.go lines 11-15
+rig_fields:
+  rig_name:
+    type: string
+    description: "Rig name"
+
+  rig_status:
+    type: string
+    values: ["active", "paused", "stopped"]
+    description: "Rig status"
+
+  agents_count:
+    type: int
+    description: "Number of agents in rig"
+
+# Synthesis Fields (description-encoded)
+# Source: internal/beads/fields.go lines 437-442
+synthesis_fields:
+  synthesis_status:
+    type: string
+    description: "Synthesis processing status"
+
+  synthesis_error:
+    type: string
+    description: "Error message if synthesis failed"
+
+# Role Config (description-encoded)
+# Source: internal/beads/fields.go lines 520-567
+role_config_fields:
+  role_name:
+    type: string
+    description: "Role name"
+
+  role_description:
+    type: string
+    description: "Role description"
+
+  capabilities:
+    type: string[]
+    description: "Role capabilities"
+
+# Example description-field encoding format
+example_encoding: |
+  title: Agent gt:polecat-main
+  description: |
+    role_type: polecat
+    rig: main
+    agent_state: working
+    hook_bead: bd-abc123
+    cleanup_status: clean
+    active_mr: bd-def456
+    notification_level: normal
+
+# Integration with beads-ralph
+integration_notes: |
+  - Gastown and beads-ralph use DIFFERENT extension mechanisms
+  - Zero field name conflicts (gastown uses description, ralph uses metadata)
+  - If ralph beads need gastown processing:
+    * Gastown Issue struct lacks Metadata field
+    * Must use `bd show <id> --json` directly to access full bead
+    * Or extend gastown's Issue struct to include Metadata
+  - beads-ralph should avoid putting data in description field
+    * Gastown parsers might misinterpret it
+    * Keep description as human-readable text only
+
+# Migration recommendation
+recommendation: |
+  Gastown should eventually migrate to using the metadata JSON column
+  instead of description-field encoding. This would:
+  - Improve type safety
+  - Eliminate parsing fragility
+  - Enable better querying
+  - Follow beads core intent (GH#1406)
+  However, this is a major breaking change for gastown and would require
+  careful migration planning.
