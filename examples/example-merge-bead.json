@@ -1,0 +1,120 @@
+{
+  "id": "bd-1-2b-merge",
+  "title": "Merge Sprint 1.2a and 1.2b example beads",
+  "description": "Integrate feature/1-2a-work-bead into the integration branch. This merge bead demonstrates merge operations for parallel sprint work, merging the example work bead from Sprint 1.2a. Serves as reference implementation for merge bead patterns.",
+  "status": "open",
+  "priority": 1,
+  "issue_type": "beads-ralph-merge",
+  "assignee": "beads-ralph-scrum-master",
+  "owner": null,
+  "dependencies": ["bd-1-2a-work"],
+  "labels": ["phase-01", "sprint-1-2b", "merge", "example"],
+  "comments": [],
+  "external_ref": null,
+  "created_at": "2026-02-08T15:00:00Z",
+  "updated_at": "2026-02-08T15:00:00Z",
+  "closed_at": null,
+  "metadata": {
+    "worktree_path": "/Users/randlee/Documents/github/beads-ralph-worktrees/feature/1-2b-merge-bead",
+    "branch": "feature/1-2b-merge-bead",
+    "source_branch": "develop",
+    "phase": "1",
+    "sprint": "1.2b",
+    "plan_file": "pm/2026-02-08-implementation-plan.md",
+    "plan_section": "## Phase 1 > ### Sprint 1.2b: Example Merge Bead",
+    "plan_sprint_id": "1.2b",
+    "branches_to_merge": [
+      "feature/1-2a-work-bead"
+    ],
+    "dev_agent_path": ".claude/agents/merge-specialist",
+    "dev_model": "sonnet",
+    "dev_prompts": [
+      "Create merge bead example in examples/example-merge-bead.json demonstrating merge operations",
+      "This is a merge bead with issue_type='beads-ralph-merge' and branches_to_merge field populated",
+      "The example shows how parallel sprints (like 1.2a) would be merged in an integration sprint",
+      "Populate all required merge bead fields including branches_to_merge array",
+      "Include dev prompts that guide merge conflict resolution and integration testing",
+      "Include QA agents that validate merge integrity and schema compliance",
+      "Validate the completed bead with: python3 scripts/validate-bead-schema.py examples/example-merge-bead.json"
+    ],
+    "qa_agents": [
+      {
+        "agent_path": ".claude/agents/qa-schema-validator",
+        "model": "haiku",
+        "prompt": "Validate that examples/example-merge-bead.json passes schema validation. Run: python3 scripts/validate-bead-schema.py examples/example-merge-bead.json. Report pass/fail status with error details if validation fails.",
+        "output_schema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "enum": ["pass", "fail", "stop"]
+            },
+            "message": {
+              "type": "string"
+            },
+            "validation_results": {
+              "type": "object",
+              "properties": {
+                "merge_bead_valid": {
+                  "type": "boolean"
+                },
+                "errors": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "required": ["status", "message"]
+        }
+      },
+      {
+        "agent_path": ".claude/agents/beads-schema-expert",
+        "model": "opus",
+        "prompt": "Review the merge bead example for correctness. Verify: (1) branches_to_merge field is properly set, (2) merge bead has issue_type='beads-ralph-merge', (3) all required fields present, (4) realistic values for a merge operation, (5) dev_prompts guide proper merge handling. Reference docs/schema.md lines 326-396.",
+        "output_schema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "enum": ["pass", "fail", "stop"]
+            },
+            "message": {
+              "type": "string"
+            },
+            "review_notes": {
+              "type": "object",
+              "properties": {
+                "schema_compliant": {
+                  "type": "boolean"
+                },
+                "merge_fields_correct": {
+                  "type": "boolean"
+                },
+                "realistic_values": {
+                  "type": "boolean"
+                },
+                "issues": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "required": ["status", "message"]
+        }
+      }
+    ],
+    "max_retry_attempts": 3,
+    "attempt_count": 0,
+    "scrum_master_session_id": null,
+    "dev_agent_session_id": null,
+    "dev_agent_executions": [],
+    "qa_agent_executions": [],
+    "pr_url": null,
+    "pr_number": null,
+    "scrum_result": null
+  }
+}
