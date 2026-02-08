@@ -45,8 +45,8 @@ This plan implements beads-ralph MVP using the system itself (dogfooding). Each 
 
 ### Sprint 1.1: Core Schema Validation Script
 
-**Worktree**: `../beads-ralph-worktrees/develop/1-1-schema-validator`
-**Branch**: `develop/1-1-schema-validator`
+**Worktree**: `../beads-ralph-worktrees/feature/1-1-schema-validator`
+**Branch**: `feature/1-1-schema-validator`
 **Source Branch**: `develop`
 
 **Dev Agents**:
@@ -58,19 +58,33 @@ This plan implements beads-ralph MVP using the system itself (dogfooding). Each 
 - `beads-schema-expert` (opus) - Review validation logic against schema.md
 
 **Tasks**:
-- [ ] Create `scripts/validate-bead-schema.py`
-- [ ] Implement phase pattern validation: `^[0-9]+[a-z]*$`
-- [ ] Implement sprint pattern validation: `^[0-9]+[a-z]*\.[0-9]+[a-z]*$`
-- [ ] Validate required metadata fields (worktree_path, branch, phase, sprint, etc.)
-- [ ] Validate QA agent output_schema structure
-- [ ] Add clear error messages for validation failures
-- [ ] Create `scripts/tests/test_validator.py` with comprehensive test cases
+- [ ] Create `scripts/bead_schema.py` with pydantic models
+  - `BeadMetadata` base model with all metadata fields from schema.md
+  - Nested models: `QAAgent`, `DevExecution`, `QAExecution`, `ScrumResult`
+  - Complete `Bead` model combining core bead fields + metadata
+  - Field validators using `@field_validator` decorator for phase/sprint patterns
+  - Path validation for agent/skill paths
+  - Model Config with strict validation (pydantic v2)
+- [ ] Create `scripts/validate-bead-schema.py` CLI tool
+  - Accept JSON from file path or stdin
+  - Parse using `Bead.model_validate_json()`
+  - Catch `ValidationError` and format with field paths
+  - Exit code 0 for valid, 1 for invalid
+- [ ] Create `scripts/requirements.txt` with pydantic>=2.0, pytest, pytest-cov
+- [ ] Create comprehensive test suite:
+  - `scripts/tests/test_bead_schema.py` - Unit tests for pydantic models
+  - `scripts/tests/test_validator.py` - Integration tests for CLI validator
+  - Test valid beads from schema.md examples
+  - Test invalid beads (missing fields, bad patterns)
+  - Achieve >90% coverage
 
 **Acceptance Criteria**:
-- Script accepts valid bead JSON from schema.md examples
-- Script rejects invalid JSON with specific error messages
+- Pydantic models cover all fields from schema.md (lines 41-238)
+- Field validators enforce phase/sprint regex patterns
+- Validator accepts valid bead JSON from schema.md examples (lines 240-324, 326-396)
+- Validator rejects invalid JSON with pydantic validation errors
 - Unit tests achieve >90% coverage
-- All validation rules from schema.md implemented
+- All validation rules from schema.md implemented via pydantic
 
 **Agent-Teams Review**:
 - Document: Did team coordination improve efficiency?
@@ -81,8 +95,8 @@ This plan implements beads-ralph MVP using the system itself (dogfooding). Each 
 
 ### Sprint 1.2a: Example Work Bead (Parallel)
 
-**Worktree**: `../beads-ralph-worktrees/develop/1-2a-work-bead`
-**Branch**: `develop/1-2a-work-bead`
+**Worktree**: `../beads-ralph-worktrees/feature/1-2a-work-bead`
+**Branch**: `feature/1-2a-work-bead`
 **Source Branch**: `develop` (after 1.1 merged)
 
 **Dev Agents**:
@@ -113,8 +127,8 @@ This plan implements beads-ralph MVP using the system itself (dogfooding). Each 
 
 ### Sprint 1.2b: Example Merge Bead (Parallel)
 
-**Worktree**: `../beads-ralph-worktrees/develop/1-2b-merge-bead`
-**Branch**: `develop/1-2b-merge-bead`
+**Worktree**: `../beads-ralph-worktrees/feature/1-2b-merge-bead`
+**Branch**: `feature/1-2b-merge-bead`
 **Source Branch**: `develop` (after 1.1 merged)
 
 **Dev Agents**:
@@ -144,8 +158,8 @@ This plan implements beads-ralph MVP using the system itself (dogfooding). Each 
 
 ### Sprint 1.3: Integration & Documentation
 
-**Worktree**: `../beads-ralph-worktrees/develop/1-3-schema-integration`
-**Branch**: `develop/1-3-schema-integration`
+**Worktree**: `../beads-ralph-worktrees/feature/1-3-schema-integration`
+**Branch**: `feature/1-3-schema-integration`
 **Source Branch**: `develop` (after 1.2a and 1.2b merged)
 
 **Dev Agents**:
@@ -182,8 +196,8 @@ This plan implements beads-ralph MVP using the system itself (dogfooding). Each 
 
 ### Sprint 2.1: Beads Architect Agent Core
 
-**Worktree**: `../beads-ralph-worktrees/develop/2-1-architect-core`
-**Branch**: `develop/2-1-architect-core`
+**Worktree**: `../beads-ralph-worktrees/feature/2-1-architect-core`
+**Branch**: `feature/2-1-architect-core`
 **Source Branch**: `develop`
 
 **Dev Agents**:
@@ -219,8 +233,8 @@ This plan implements beads-ralph MVP using the system itself (dogfooding). Each 
 
 ### Sprint 2.2a: Dependency Compilation Logic (Parallel)
 
-**Worktree**: `../beads-ralph-worktrees/develop/2-2a-dependency-logic`
-**Branch**: `develop/2-2a-dependency-logic`
+**Worktree**: `../beads-ralph-worktrees/feature/2-2a-dependency-logic`
+**Branch**: `feature/2-2a-dependency-logic`
 **Source Branch**: `develop` (after 2.1 merged)
 
 **Dev Agents**:
@@ -254,8 +268,8 @@ This plan implements beads-ralph MVP using the system itself (dogfooding). Each 
 
 ### Sprint 2.2b: Plan Back-Annotation Design (Parallel)
 
-**Worktree**: `../beads-ralph-worktrees/develop/2-2b-back-annotation`
-**Branch**: `develop/2-2b-back-annotation`
+**Worktree**: `../beads-ralph-worktrees/feature/2-2b-back-annotation`
+**Branch**: `feature/2-2b-back-annotation`
 **Source Branch**: `develop` (after 2.1 merged)
 
 **Dev Agents**:
@@ -287,8 +301,8 @@ This plan implements beads-ralph MVP using the system itself (dogfooding). Each 
 
 ### Sprint 2.3: Beads Architect Integration & Testing
 
-**Worktree**: `../beads-ralph-worktrees/develop/2-3-architect-integration`
-**Branch**: `develop/2-3-architect-integration`
+**Worktree**: `../beads-ralph-worktrees/feature/2-3-architect-integration`
+**Branch**: `feature/2-3-architect-integration`
 **Source Branch**: `develop` (after 2.2a and 2.2b merged)
 
 **Dev Agents**:
@@ -330,8 +344,8 @@ This plan implements beads-ralph MVP using the system itself (dogfooding). Each 
 
 ### Sprint 3.1a: Planning Skill Definition (Parallel)
 
-**Worktree**: `../beads-ralph-worktrees/develop/3-1a-planning-skill`
-**Branch**: `develop/3-1a-planning-skill`
+**Worktree**: `../beads-ralph-worktrees/feature/3-1a-planning-skill`
+**Branch**: `feature/3-1a-planning-skill`
 **Source Branch**: `develop`
 
 **Dev Agents**:
@@ -367,8 +381,8 @@ This plan implements beads-ralph MVP using the system itself (dogfooding). Each 
 
 ### Sprint 3.1b: Plan Review Agent (Parallel)
 
-**Worktree**: `../beads-ralph-worktrees/develop/3-1b-plan-review`
-**Branch**: `develop/3-1b-plan-review`
+**Worktree**: `../beads-ralph-worktrees/feature/3-1b-plan-review`
+**Branch**: `feature/3-1b-plan-review`
 **Source Branch**: `develop`
 
 **Dev Agents**:
@@ -403,8 +417,8 @@ This plan implements beads-ralph MVP using the system itself (dogfooding). Each 
 
 ### Sprint 3.2: Planning System Integration
 
-**Worktree**: `../beads-ralph-worktrees/develop/3-2-planning-integration`
-**Branch**: `develop/3-2-planning-integration`
+**Worktree**: `../beads-ralph-worktrees/feature/3-2-planning-integration`
+**Branch**: `feature/3-2-planning-integration`
 **Source Branch**: `develop` (after 3.1a and 3.1b merged)
 
 **Dev Agents**:
@@ -442,8 +456,8 @@ This plan implements beads-ralph MVP using the system itself (dogfooding). Each 
 
 ### Sprint 4.1: Go Project Setup & Core Loop Structure
 
-**Worktree**: `../beads-ralph-worktrees/develop/4-1-go-setup`
-**Branch**: `develop/4-1-go-setup`
+**Worktree**: `../beads-ralph-worktrees/feature/4-1-go-setup`
+**Branch**: `feature/4-1-go-setup`
 **Source Branch**: `develop`
 
 **Dev Agents**:
@@ -478,8 +492,8 @@ This plan implements beads-ralph MVP using the system itself (dogfooding). Each 
 
 ### Sprint 4.2a: Bead Claiming Logic (Parallel)
 
-**Worktree**: `../beads-ralph-worktrees/develop/4-2a-claim-logic`
-**Branch**: `develop/4-2a-claim-logic`
+**Worktree**: `../beads-ralph-worktrees/feature/4-2a-claim-logic`
+**Branch**: `feature/4-2a-claim-logic`
 **Source Branch**: `develop` (after 4.1 merged)
 
 **Dev Agents**:
@@ -512,8 +526,8 @@ This plan implements beads-ralph MVP using the system itself (dogfooding). Each 
 
 ### Sprint 4.2b: Configuration System (Parallel)
 
-**Worktree**: `../beads-ralph-worktrees/develop/4-2b-config-system`
-**Branch**: `develop/4-2b-config-system`
+**Worktree**: `../beads-ralph-worktrees/feature/4-2b-config-system`
+**Branch**: `feature/4-2b-config-system`
 **Source Branch**: `develop` (after 4.1 merged)
 
 **Dev Agents**:
@@ -545,8 +559,8 @@ This plan implements beads-ralph MVP using the system itself (dogfooding). Each 
 
 ### Sprint 4.2c: Scrum-Master Launcher (Parallel)
 
-**Worktree**: `../beads-ralph-worktrees/develop/4-2c-scrum-launcher`
-**Branch**: `develop/4-2c-scrum-launcher`
+**Worktree**: `../beads-ralph-worktrees/feature/4-2c-scrum-launcher`
+**Branch**: `feature/4-2c-scrum-launcher`
 **Source Branch**: `develop` (after 4.1 merged)
 
 **Dev Agents**:
@@ -579,8 +593,8 @@ This plan implements beads-ralph MVP using the system itself (dogfooding). Each 
 
 ### Sprint 4.3: Result Processing & Loop Integration
 
-**Worktree**: `../beads-ralph-worktrees/develop/4-3-result-processing`
-**Branch**: `develop/4-3-result-processing`
+**Worktree**: `../beads-ralph-worktrees/feature/4-3-result-processing`
+**Branch**: `feature/4-3-result-processing`
 **Source Branch**: `develop` (after 4.2a, 4.2b, 4.2c merged)
 
 **Dev Agents**:
@@ -623,8 +637,8 @@ This plan implements beads-ralph MVP using the system itself (dogfooding). Each 
 
 ### Sprint 5.1: Scrum-Master Agent Core
 
-**Worktree**: `../beads-ralph-worktrees/develop/5-1-scrum-master-core`
-**Branch**: `develop/5-1-scrum-master-core`
+**Worktree**: `../beads-ralph-worktrees/feature/5-1-scrum-master-core`
+**Branch**: `feature/5-1-scrum-master-core`
 **Source Branch**: `develop`
 
 **Dev Agents**:
@@ -661,8 +675,8 @@ This plan implements beads-ralph MVP using the system itself (dogfooding). Each 
 
 ### Sprint 5.2: Dev/QA Retry Loop
 
-**Worktree**: `../beads-ralph-worktrees/develop/5-2-dev-qa-loop`
-**Branch**: `develop/5-2-dev-qa-loop`
+**Worktree**: `../beads-ralph-worktrees/feature/5-2-dev-qa-loop`
+**Branch**: `feature/5-2-dev-qa-loop`
 **Source Branch**: `develop` (after 5.1 merged)
 
 **Dev Agents**:
@@ -699,8 +713,8 @@ This plan implements beads-ralph MVP using the system itself (dogfooding). Each 
 
 ### Sprint 5.3: PR Creation & Bead Updates
 
-**Worktree**: `../beads-ralph-worktrees/develop/5-3-pr-bead-updates`
-**Branch**: `develop/5-3-pr-bead-updates`
+**Worktree**: `../beads-ralph-worktrees/feature/5-3-pr-bead-updates`
+**Branch**: `feature/5-3-pr-bead-updates`
 **Source Branch**: `develop` (after 5.2 merged)
 
 **Dev Agents**:
@@ -740,8 +754,8 @@ This plan implements beads-ralph MVP using the system itself (dogfooding). Each 
 
 ### Sprint 6.1a: Example Dev Agents (Parallel)
 
-**Worktree**: `../beads-ralph-worktrees/develop/6-1a-dev-agents`
-**Branch**: `develop/6-1a-dev-agents`
+**Worktree**: `../beads-ralph-worktrees/feature/6-1a-dev-agents`
+**Branch**: `feature/6-1a-dev-agents`
 **Source Branch**: `develop`
 
 **Dev Agents**:
@@ -772,8 +786,8 @@ This plan implements beads-ralph MVP using the system itself (dogfooding). Each 
 
 ### Sprint 6.1b: Example QA Agents (Parallel)
 
-**Worktree**: `../beads-ralph-worktrees/develop/6-1b-qa-agents`
-**Branch**: `develop/6-1b-qa-agents`
+**Worktree**: `../beads-ralph-worktrees/feature/6-1b-qa-agents`
+**Branch**: `feature/6-1b-qa-agents`
 **Source Branch**: `develop`
 
 **Dev Agents**:
@@ -806,8 +820,8 @@ This plan implements beads-ralph MVP using the system itself (dogfooding). Each 
 
 ### Sprint 6.1c: MVP Test Plan (Parallel)
 
-**Worktree**: `../beads-ralph-worktrees/develop/6-1c-mvp-test-plan`
-**Branch**: `develop/6-1c-mvp-test-plan`
+**Worktree**: `../beads-ralph-worktrees/feature/6-1c-mvp-test-plan`
+**Branch**: `feature/6-1c-mvp-test-plan`
 **Source Branch**: `develop`
 
 **Dev Agents**:
@@ -841,8 +855,8 @@ This plan implements beads-ralph MVP using the system itself (dogfooding). Each 
 
 ### Sprint 6.2: End-to-End MVP Test
 
-**Worktree**: `../beads-ralph-worktrees/develop/6-2-mvp-e2e-test`
-**Branch**: `develop/6-2-mvp-e2e-test`
+**Worktree**: `../beads-ralph-worktrees/feature/6-2-mvp-e2e-test`
+**Branch**: `feature/6-2-mvp-e2e-test`
 **Source Branch**: `develop` (after 6.1a, 6.1b, 6.1c merged)
 
 **Dev Agents**:
@@ -885,8 +899,8 @@ This plan implements beads-ralph MVP using the system itself (dogfooding). Each 
 
 ### Sprint 6.3: MVP Documentation & Cleanup
 
-**Worktree**: `../beads-ralph-worktrees/develop/6-3-mvp-documentation`
-**Branch**: `develop/6-3-mvp-documentation`
+**Worktree**: `../beads-ralph-worktrees/feature/6-3-mvp-documentation`
+**Branch**: `feature/6-3-mvp-documentation`
 **Source Branch**: `develop` (after 6.2 merged)
 
 **Dev Agents**:
