@@ -214,6 +214,21 @@ retry_fields:
     validation: "Must be >= 0"
 
 # Agent Execution Tracking (4 fields)
+#
+# CRITICAL REQUIREMENT: Agent ID Tracking
+# ========================================
+# Every agent that executes work in the ralph loop MUST have its agent_id tracked.
+# - agent_id: Unique agent instance identifier (e.g., "a5acc68")
+# - session_id: Claude session/project ID (e.g., "proj_abc123xyz")
+#
+# Purpose: Enables agent resurrection via claude-history tool for:
+# - Questioning agents about their work after execution
+# - Completing tasks that were not finished in initial run
+# - Debugging failed executions
+# - Full audit trail of who did what
+#
+# All DevExecution and QAExecution entries MUST include agent_id.
+
 execution_tracking_fields:
   scrum_master_session_id:
     type: string
@@ -246,6 +261,12 @@ dev_execution_structure:
     required: true
     description: "Attempt number (1, 2, 3...)"
     validation: "Must be >= 1"
+
+  agent_id:
+    type: string
+    required: true
+    description: "Unique agent instance ID (for resurrection via claude-history tool)"
+    example: "a5acc68"
 
   session_id:
     type: string
@@ -293,6 +314,12 @@ qa_execution_structure:
     required: true
     description: "Which dev attempt this validated"
     validation: "Must be >= 1"
+
+  agent_id:
+    type: string
+    required: true
+    description: "Unique agent instance ID (for resurrection via claude-history tool)"
+    example: "a177a45"
 
   session_id:
     type: string
