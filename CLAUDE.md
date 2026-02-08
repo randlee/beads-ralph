@@ -6,10 +6,21 @@
 
 - Main repo at `/Users/randlee/Documents/github/beads-ralph/` MUST remain on `develop` at all times
 - **ALWAYS use `sc-git-worktree` skill** to create worktrees for all development work
+- **ALWAYS create worktrees FROM `develop` branch** (not from `main`)
 - Do NOT use `git checkout` or `git switch` in the main repository
 - All sprint work happens in worktrees at `../beads-ralph-worktrees/<branch-name>`
+- **All PRs target `develop` branch** (integration branch, not `main`)
 
 **Why**: Switching branches in the main repo breaks worktree references and destabilizes the development environment.
+
+**Worktree Creation Pattern**:
+```bash
+# ✅ CORRECT: Create worktree from develop
+/sc-git-worktree --create feature/1-2a-work-bead develop
+
+# ❌ WRONG: Creating from main
+/sc-git-worktree --create feature/1-2a-work-bead main
+```
 
 ---
 
@@ -35,7 +46,11 @@
 - CI/CD integration (Python tests in Phase 1, Go tests in Phase 4)
 - Target: MVP capable of building post-MVP features
 
-**Current Status**: Ready to begin Phase 1, Sprint 1.1 (Schema Validation Script)
+**Current Status**: Phase 1 in progress - 3 of 26 sprints complete
+- ✅ Sprint 1.1: Core Schema Validation Script (PR #4 merged)
+- ✅ Sprint 1.2a: Example Work Bead (PR #8 pending review)
+- ✅ Sprint 1.2b: Example Merge Bead (PR #9 pending review)
+- **Next**: Sprint 1.3 - Integration & Documentation
 
 ---
 
