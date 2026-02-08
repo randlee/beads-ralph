@@ -205,19 +205,23 @@ def create_work_bead(sprint):
 **Type**: Claude Code Agent (`.claude/agents/plan-review.md`)
 
 **Responsibilities**:
-- Validate bead schema against specification
+- Validate bead schema against specification using pydantic models
 - Check for dependency cycles
 - Verify phase/sprint numbering
 - Validate worktree paths and branch names
 - Check agent/skill file existence
 
 **Validation Steps**:
-1. Schema validation (all required fields)
+1. Schema validation using pydantic models from `scripts/bead_schema.py`
 2. Pattern validation (phase/sprint regex)
 3. Dependency graph analysis (cycle detection)
 4. File existence checks (agents, skills)
 5. Worktree path validation (no conflicts)
 6. Branch name validation (git-safe names)
+
+**Technology Stack**:
+- Python 3.12+ with pydantic v2 for schema validation
+- Provides type safety and detailed validation errors
 
 **Output**: Validation report with errors/warnings
 

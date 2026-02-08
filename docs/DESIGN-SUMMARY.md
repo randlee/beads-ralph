@@ -259,8 +259,9 @@ No shared state between sprints.
 
 ### Validation Tools
 
-- **Python Script**: `scripts/validate-bead-schema.py`
-- **Plan Review Agent**: Validates during planning
+- **Pydantic Models**: `scripts/bead_schema.py` - Type-safe schema definitions using pydantic v2
+- **Python Script**: `scripts/validate-bead-schema.py` - CLI tool using pydantic models
+- **Plan Review Agent**: Validates during planning using pydantic models
 - **Go Ralph Loop**: Pre-flight checks before execution
 
 ## Corner Cases Covered
@@ -286,13 +287,15 @@ Each scenario includes:
 
 ### Phase 1: Schema & Validation (Priority 1)
 
-- [ ] Implement bead schema validation (Python)
+- [ ] Implement pydantic v2 models for bead schema
+- [ ] Create schema validation CLI tool using pydantic
 - [ ] Create example beads (work and merge types)
 - [ ] Test phase/sprint numbering patterns
 - [ ] Validate worktree path generation
 
 **Deliverables**:
-- `scripts/validate-bead-schema.py`
+- `scripts/bead_schema.py` (pydantic models)
+- `scripts/validate-bead-schema.py` (CLI using models)
 - `examples/example-work-bead.json`
 - `examples/example-merge-bead.json`
 

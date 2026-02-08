@@ -1,0 +1,450 @@
+# Base Beads Schema
+# Extracted from: ../beads/internal/storage/sqlite/schema.go
+# Version: v0.49.4-52-g249609de
+# Commit: 249609de0c8ec4e9d8e936d3ecdcca7e4e8d5f06
+# Last verified: 2026-02-08
+#
+# Source Agent: a3c11b5 (schema-registry-researcher, opus model)
+# Session ID: ee0b0536-5b06-4033-b483-97a8dceb3051
+# Resurrect via claude-history for schema analysis questions
+
+# This represents the BASE CREATE TABLE from schema.go (43 columns)
+# Additional columns (due_at, defer_until, close_reason, hook_bead, etc.)
+# are added via migrations in internal/storage/sqlite/migrations/
+
+core_fields:
+  # Primary fields
+  id:
+    sql_type: "TEXT PRIMARY KEY"
+    go_type: "string"
+    go_field: "ID"
+    required: true
+    description: "Unique identifier (e.g., bd-abc123)"
+
+  content_hash:
+    sql_type: "TEXT"
+    go_type: "string"
+    go_field: "ContentHash"
+    json: "-"  # Not exported to JSON
+    description: "Content hash for change detection"
+
+  title:
+    sql_type: "TEXT NOT NULL"
+    go_type: "string"
+    go_field: "Title"
+    required: true
+    max_length: 500
+    constraint: "CHECK(length(title) <= 500)"
+    description: "Work item title"
+
+  description:
+    sql_type: "TEXT NOT NULL"
+    go_type: "string"
+    go_field: "Description"
+    required: true
+    default: "''"
+    description: "Detailed description (gastown uses this for key:value encoding)"
+
+  design:
+    sql_type: "TEXT NOT NULL"
+    go_type: "string"
+    go_field: "Design"
+    required: true
+    default: "''"
+    description: "Design document or technical approach"
+
+  acceptance_criteria:
+    sql_type: "TEXT NOT NULL"
+    go_type: "string"
+    go_field: "AcceptanceCriteria"
+    required: true
+    default: "''"
+    description: "Acceptance criteria for completion"
+
+  notes:
+    sql_type: "TEXT NOT NULL"
+    go_type: "string"
+    go_field: "Notes"
+    required: true
+    default: "''"
+    description: "Additional notes or context"
+
+  # Status and priority
+  status:
+    sql_type: "TEXT NOT NULL"
+    go_type: "Status"
+    go_field: "Status"
+    required: true
+    default: "'open'"
+    values: ["open", "in_progress", "closed", "blocked", "tombstone"]
+    description: "Current status of the bead"
+
+  priority:
+    sql_type: "INTEGER NOT NULL"
+    go_type: "int"
+    go_field: "Priority"
+    required: true
+    default: 2
+    constraint: "CHECK(priority >= 0 AND priority <= 4)"
+    description: "Priority level (0=critical, 4=minimal)"
+
+  issue_type:
+    sql_type: "TEXT NOT NULL"
+    go_type: "IssueType"
+    go_field: "IssueType"
+    required: true
+    default: "'task'"
+    description: "Type of work item (task, bug, feature, etc.)"
+    custom_types:
+      gastown: ["agent", "role", "rig", "convoy", "slot", "queue", "event", "message", "molecule", "gate", "merge-request"]
+      ralph: ["beads-ralph-work", "beads-ralph-merge"]
+
+  assignee:
+    sql_type: "TEXT"
+    go_type: "string"
+    go_field: "Assignee"
+    description: "Assigned to (agent, user, or system)"
+
+  estimated_minutes:
+    sql_type: "INTEGER"
+    go_type: "*int"
+    go_field: "EstimatedMinutes"
+    description: "Estimated effort in minutes"
+
+  # Timestamps and ownership
+  created_at:
+    sql_type: "DATETIME NOT NULL"
+    go_type: "time.Time"
+    go_field: "CreatedAt"
+    required: true
+    default: "CURRENT_TIMESTAMP"
+    description: "Creation timestamp"
+
+  created_by:
+    sql_type: "TEXT"
+    go_type: "string"
+    go_field: "CreatedBy"
+    default: "''"
+    description: "Creator identifier"
+
+  owner:
+    sql_type: "TEXT"
+    go_type: "string"
+    go_field: "Owner"
+    default: "''"
+    description: "Owner or responsible party"
+
+  updated_at:
+    sql_type: "DATETIME NOT NULL"
+    go_type: "time.Time"
+    go_field: "UpdatedAt"
+    required: true
+    default: "CURRENT_TIMESTAMP"
+    description: "Last update timestamp"
+
+  closed_at:
+    sql_type: "DATETIME"
+    go_type: "*time.Time"
+    go_field: "ClosedAt"
+    constraint: |
+      CHECK (
+        (status = 'closed' AND closed_at IS NOT NULL) OR
+        (status = 'tombstone') OR
+        (status NOT IN ('closed', 'tombstone') AND closed_at IS NULL)
+      )
+    description: "Close timestamp (required for closed status)"
+
+  closed_by_session:
+    sql_type: "TEXT"
+    go_type: "string"
+    go_field: "ClosedBySession"
+    default: "''"
+    description: "Session ID that closed the bead"
+
+  # External references and specs
+  external_ref:
+    sql_type: "TEXT"
+    go_type: "*string"
+    go_field: "ExternalRef"
+    description: "External reference (e.g., GitHub PR URL)"
+
+  spec_id:
+    sql_type: "TEXT"
+    go_type: "string"
+    go_field: "SpecID"
+    description: "Specification ID reference"
+
+  # Compaction fields
+  compaction_level:
+    sql_type: "INTEGER"
+    go_type: "int"
+    go_field: "CompactionLevel"
+    default: 0
+    description: "Compaction level for history management"
+
+  compacted_at:
+    sql_type: "DATETIME"
+    go_type: "*time.Time"
+    go_field: "CompactedAt"
+    description: "Compaction timestamp"
+
+  compacted_at_commit:
+    sql_type: "TEXT"
+    go_type: "*string"
+    go_field: "CompactedAtCommit"
+    description: "Git commit at compaction time"
+
+  original_size:
+    sql_type: "INTEGER"
+    go_type: "int"
+    go_field: "OriginalSize"
+    description: "Original size before compaction"
+
+  # Deletion fields
+  deleted_at:
+    sql_type: "DATETIME"
+    go_type: "*time.Time"
+    go_field: "DeletedAt"
+    description: "Deletion timestamp (tombstone)"
+
+  deleted_by:
+    sql_type: "TEXT"
+    go_type: "string"
+    go_field: "DeletedBy"
+    default: "''"
+    description: "Who deleted the bead"
+
+  delete_reason:
+    sql_type: "TEXT"
+    go_type: "string"
+    go_field: "DeleteReason"
+    default: "''"
+    description: "Reason for deletion"
+
+  original_type:
+    sql_type: "TEXT"
+    go_type: "string"
+    go_field: "OriginalType"
+    default: "''"
+    description: "Original issue type before tombstone"
+
+  # Messaging fields (bd-kwro)
+  sender:
+    sql_type: "TEXT"
+    go_type: "string"
+    go_field: "Sender"
+    default: "''"
+    description: "Message sender (for message-type beads)"
+
+  ephemeral:
+    sql_type: "INTEGER"
+    go_type: "bool"
+    go_field: "Ephemeral"
+    default: 0
+    description: "Ephemeral message flag (0=false, 1=true)"
+
+  # Wisp type for TTL-based compaction (gt-9br)
+  wisp_type:
+    sql_type: "TEXT"
+    go_type: "WispType"
+    go_field: "WispType"
+    default: "''"
+    description: "Wisp type for TTL-based cleanup"
+
+  # Pinned field (bd-7h5)
+  pinned:
+    sql_type: "INTEGER"
+    go_type: "bool"
+    go_field: "Pinned"
+    default: 0
+    description: "Pinned flag for UI display"
+
+  # Template field (beads-1ra)
+  is_template:
+    sql_type: "INTEGER"
+    go_type: "bool"
+    go_field: "IsTemplate"
+    default: 0
+    description: "Template bead flag"
+
+  # Work economics field (bd-fqze8) - HOP Decision 006
+  crystallizes:
+    sql_type: "INTEGER"
+    go_type: "bool"
+    go_field: "Crystallizes"
+    default: 0
+    description: "Whether work crystallizes value (HOP)"
+
+  # Molecule type field (bd-oxgi)
+  mol_type:
+    sql_type: "TEXT"
+    go_type: "MolType"
+    go_field: "MolType"
+    default: "''"
+    description: "Molecule type (atom, molecule, compound)"
+
+  # Work type field (Decision 006: mutex vs open_competition)
+  work_type:
+    sql_type: "TEXT"
+    go_type: "WorkType"
+    go_field: "WorkType"
+    default: "'mutex'"
+    description: "Work assignment type (mutex or open_competition)"
+
+  # HOP quality score field
+  quality_score:
+    sql_type: "REAL"
+    go_type: "*float32"
+    go_field: "QualityScore"
+    constraint: "CHECK(quality_score >= 0.0 AND quality_score <= 1.0)"
+    description: "Quality score 0.0-1.0 (set by Refineries on merge)"
+
+  # Federation source system field
+  source_system:
+    sql_type: "TEXT"
+    go_type: "string"
+    go_field: "SourceSystem"
+    default: "''"
+    description: "Source system for federated beads"
+
+  # Custom metadata field (GH#1406) - THIS IS WHERE RALPH STORES EVERYTHING
+  metadata:
+    sql_type: "TEXT NOT NULL"
+    go_type: "json.RawMessage"
+    go_field: "Metadata"
+    required: true
+    default: "'{}'"
+    description: "JSON storage for extensions (beads-ralph uses this)"
+    notes: |
+      Added in migration 042 (GH#1406). This is the official extension point
+      for adding custom fields without modifying the base schema.
+      beads-ralph stores all 22 custom fields here.
+      Gastown does NOT use this field (uses description-field encoding instead).
+
+  # Event fields (bd-ecmd)
+  event_kind:
+    sql_type: "TEXT"
+    go_type: "string"
+    go_field: "EventKind"
+    default: "''"
+    description: "Event kind (for event-type beads)"
+
+  actor:
+    sql_type: "TEXT"
+    go_type: "string"
+    go_field: "Actor"
+    default: "''"
+    description: "Event actor"
+
+  target:
+    sql_type: "TEXT"
+    go_type: "string"
+    go_field: "Target"
+    default: "''"
+    description: "Event target"
+
+  payload:
+    sql_type: "TEXT"
+    go_type: "string"
+    go_field: "Payload"
+    default: "''"
+    description: "Event payload data"
+
+# Related tables (not part of issues table but important for schema)
+related_tables:
+  dependencies:
+    table_name: "dependencies"
+    description: "Dependency edges between beads"
+    primary_key: "(issue_id, depends_on_id)"
+    note: "Edge schema per Decision 004; PRIMARY KEY does NOT include 'type'"
+
+  labels:
+    table_name: "labels"
+    description: "Labels/tags for beads"
+    primary_key: "(issue_id, label)"
+
+  comments:
+    table_name: "comments"
+    description: "Comments on beads"
+    primary_key: "(id)"
+
+# Migration-added fields (not in base CREATE TABLE)
+migration_fields:
+  due_at:
+    sql_type: "DATETIME"
+    go_type: "*time.Time"
+    go_field: "DueAt"
+    description: "Due date for work"
+    added_by: "Migration (date TBD)"
+
+  defer_until:
+    sql_type: "DATETIME"
+    go_type: "*time.Time"
+    go_field: "DeferUntil"
+    description: "Defer work until this date"
+    added_by: "Migration (date TBD)"
+
+  close_reason:
+    sql_type: "TEXT"
+    go_type: "string"
+    go_field: "CloseReason"
+    description: "Reason for closure"
+    added_by: "Migration (date TBD)"
+
+  hook_bead:
+    sql_type: "TEXT"
+    go_type: "string"
+    go_field: "HookBead"
+    description: "Agent's current work bead ID"
+    added_by: "Migration (gastown-specific)"
+
+  role_bead:
+    sql_type: "TEXT"
+    go_type: "string"
+    go_field: "RoleBead"
+    description: "Agent's role bead ID"
+    added_by: "Migration (gastown-specific)"
+
+  agent_state:
+    sql_type: "TEXT"
+    go_type: "string"
+    go_field: "AgentState"
+    description: "Agent state (spawning, working, done, stuck)"
+    added_by: "Migration (gastown-specific)"
+
+  last_activity:
+    sql_type: "DATETIME"
+    go_type: "*time.Time"
+    go_field: "LastActivity"
+    description: "Agent's last activity timestamp"
+    added_by: "Migration (gastown-specific)"
+
+  role_type:
+    sql_type: "TEXT"
+    go_type: "string"
+    go_field: "RoleType"
+    description: "Agent role type (polecat, witness, etc.)"
+    added_by: "Migration (gastown-specific)"
+
+  rig:
+    sql_type: "TEXT"
+    go_type: "string"
+    go_field: "Rig"
+    description: "Rig name for agent"
+    added_by: "Migration (gastown-specific)"
+
+  holder:
+    sql_type: "TEXT"
+    go_type: "string"
+    go_field: "Holder"
+    description: "Slot holder"
+    added_by: "Migration (gastown-specific)"
+
+# Notes
+notes: |
+  - Base schema has 43 columns in CREATE TABLE
+  - Additional ~10 columns added via migrations
+  - Go struct has ~80+ fields including related-table data and runtime-only fields
+  - metadata column is the official extension point (added GH#1406)
+  - Gastown extends via description-field encoding, NOT metadata
+  - beads-ralph extends via metadata JSON (clean, type-safe approach)
