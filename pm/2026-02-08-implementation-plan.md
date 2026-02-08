@@ -15,10 +15,10 @@ This plan implements beads-ralph MVP using the system itself (dogfooding). Each 
 
 | Phase | Focus | Sprints | Parallelization |
 |-------|-------|---------|-----------------|
-| **1** | Schema & Validation | 1.1, 1.2a/b, 1.3 | High |
+| **1** | Schema & Validation | 1.1, 1.2a/b, 1.3, 1.4 | High |
 | **2** | Beads Architect Agent | 2.1, 2.2a/b, 2.3 | Medium |
 | **3** | Planning System | 3.1a/b, 3.2 | High |
-| **4** | Go Ralph Loop | 4.1, 4.2a/b/c, 4.3 | High |
+| **4** | Go Ralph Loop | 4.1, 4.2a/b/c/d, 4.3 | High |
 | **5** | Scrum-Master Agent | 5.1, 5.2, 5.3 | Sequential |
 | **6** | Example Agents & MVP Test | 6.1a/b/c, 6.2, 6.3 | High |
 
@@ -173,6 +173,43 @@ This plan implements beads-ralph MVP using the system itself (dogfooding). Each 
 - Document: Merge process experience
 - Note: Any conflicts, how resolved
 - Lessons: Merge strategy effectiveness
+
+---
+
+### Sprint 1.4: CI Setup for Schema Validation
+
+**Worktree**: `../beads-ralph-worktrees/develop/1-4-ci-setup`
+**Branch**: `develop/1-4-ci-setup`
+**Source Branch**: `develop` (after 1.3 merged)
+
+**Dev Agents**:
+- `python-backend-dev` (sonnet)
+
+**QA Agents**:
+- `qa-python-tests` (haiku) - Test CI workflow locally
+- `qa-code-review` (opus) - Review workflow configuration
+
+**Tasks**:
+- [ ] Create `.github/workflows/ci.yml`
+- [ ] Configure trigger: `pull_request` on `main` and `develop` branches
+- [ ] Configure trigger: `push` on `main` branch only (post-merge safety net)
+- [ ] Add Python setup step (Python 3.11+)
+- [ ] Add pytest execution step with coverage reporting
+- [ ] Add schema validation step (run validator on example beads)
+- [ ] Fail workflow if tests fail or validation fails
+- [ ] Add status badge to README.md
+
+**Acceptance Criteria**:
+- CI workflow triggers correctly on PRs to main/develop
+- CI workflow triggers on push to main
+- Python tests run successfully
+- Schema validator runs on all example beads
+- Workflow fails fast on test failures
+- Status badge shows build status
+
+**Agent-Teams Review**:
+- Note: CI setup experience
+- Lessons: GitHub Actions workflow testing
 
 ---
 
@@ -577,11 +614,47 @@ This plan implements beads-ralph MVP using the system itself (dogfooding). Each 
 
 ---
 
+### Sprint 4.2d: CI Integration for Go Tests (Parallel)
+
+**Worktree**: `../beads-ralph-worktrees/develop/4-2d-go-ci`
+**Branch**: `develop/4-2d-go-ci`
+**Source Branch**: `develop` (after 4.1 merged)
+
+**Dev Agents**:
+- `go-backend-dev` (sonnet)
+
+**QA Agents**:
+- `qa-go-tests` (haiku) - Test CI workflow locally
+- `qa-code-review` (opus) - Review workflow updates
+
+**Tasks**:
+- [ ] Update `.github/workflows/ci.yml`
+- [ ] Add Go setup step (Go 1.21+)
+- [ ] Add go build step for src/ directory
+- [ ] Add go test step with coverage reporting
+- [ ] Add go vet and golint checks
+- [ ] Ensure Python tests still run (multi-language CI)
+- [ ] Test workflow runs both Python and Go checks
+
+**Acceptance Criteria**:
+- CI workflow builds Go code successfully
+- CI workflow runs go test on all packages
+- CI workflow runs go vet and golint
+- Python tests continue to run (no regression)
+- Multi-language CI works correctly
+- Workflow fails if Go tests fail
+
+**Agent-Teams Review**:
+- Note: Multi-language CI setup experience
+- Lessons: Workflow composition for multiple runtimes
+
+---
+
 ### Sprint 4.3: Result Processing & Loop Integration
 
 **Worktree**: `../beads-ralph-worktrees/develop/4-3-result-processing`
 **Branch**: `develop/4-3-result-processing`
-**Source Branch**: `develop` (after 4.2a, 4.2b, 4.2c merged)
+**Source Branch**: `develop` (after 4.2a, 4.2b, 4.2c, 4.2d merged)
 
 **Dev Agents**:
 - `go-backend-dev` (sonnet)
@@ -592,7 +665,7 @@ This plan implements beads-ralph MVP using the system itself (dogfooding). Each 
 - `qa-code-review` (opus) - Architecture review
 
 **Tasks**:
-- [ ] Merge 4.2a/b/c branches
+- [ ] Merge 4.2a/b/c/d branches
 - [ ] Create `src/ralph/results.go`
 - [ ] Implement `processResults(results)` function
 - [ ] Check for fatal errors (stop loop)
@@ -959,10 +1032,27 @@ Features to build using beads-ralph itself:
 
 ## Notes for Execution
 
+### ⚠️ CRITICAL: Branch Management
+
+**NEVER switch the main working branch on disk from `develop`.**
+
+- The main repository clone at `/Users/randlee/Documents/github/beads-ralph/` MUST remain on the `develop` branch at all times
+- **ALL sprint work MUST be done in worktrees** created via `sc-git-worktree` skill
+- Do NOT use `git checkout` to switch branches in the main repository
+- Do NOT use `git switch` in the main repository
+- Worktrees provide complete isolation - use them exclusively for all development work
+
+**Why This Matters**:
+- Main repository serves as stable reference point
+- Worktrees depend on main repo being on develop
+- Switching branches in main repo can break worktree references
+- Agents should ONLY work in their assigned worktrees, never in main repo
+
 ### Worktree Management
 - All worktrees created with `sc-git-worktree` skill
 - Worktree path pattern: `../beads-ralph-worktrees/<branch-name>`
 - Each worktree isolated (no cross-contamination)
+- Main repo stays on develop, worktrees handle all branch work
 
 ### Dev-QA Pattern
 - Every sprint: Dev agent(s) → QA agent(s) → Commit/Push/PR
