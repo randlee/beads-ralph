@@ -3,9 +3,16 @@
 This document tracks mismatches between documentation and actual source code for beads and gastown schemas.
 
 **Last Updated**: 2026-02-08
+**Source Agent**: a3c11b5 (schema-registry-researcher, opus model)
+**Session ID**: ee0b0536-5b06-4033-b483-97a8dceb3051
 **Verified Against**:
 - beads v0.49.4-52-g249609de (commit 249609de)
 - gastown v0.5.0-329-g7cf6e82d (commit 7cf6e82d)
+
+**Agent Resurrection**: Use claude-history tool with agent ID `a3c11b5` to:
+- Ask about specific discrepancies
+- Request re-verification after upstream updates
+- Clarify source code analysis methodology
 
 ---
 

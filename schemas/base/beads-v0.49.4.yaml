@@ -3,6 +3,10 @@
 # Version: v0.49.4-52-g249609de
 # Commit: 249609de0c8ec4e9d8e936d3ecdcca7e4e8d5f06
 # Last verified: 2026-02-08
+#
+# Source Agent: a3c11b5 (schema-registry-researcher, opus model)
+# Session ID: ee0b0536-5b06-4033-b483-97a8dceb3051
+# Resurrect via claude-history for schema analysis questions
 
 # This represents the BASE CREATE TABLE from schema.go (43 columns)
 # Additional columns (due_at, defer_until, close_reason, hook_bead, etc.)

@@ -2,6 +2,10 @@
 # Version: v0.1.0 (planned MVP)
 # Based on: docs/schema.md
 # Last verified: 2026-02-08
+#
+# Source Agent: a3c11b5 (schema-registry-researcher, opus model)
+# Updated by: Session ee0b0536-5b06-4033-b483-97a8dceb3051 (added agent_id tracking)
+# Resurrect via claude-history for schema questions
 
 # Extension mechanism: metadata JSON column
 extension_mechanism:

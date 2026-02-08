@@ -3,6 +3,11 @@
 # Commit: 7cf6e82dcca510c4e1e62d2c9fe3ef1e31139386
 # Repo: https://github.com/steveyegge/gastown.git
 # Last verified: 2026-02-08
+#
+# Source Agents:
+#   - a3c11b5 (schema-registry-researcher, opus) - Initial schema extraction
+#   - a5acc68 (gastown-concepts-researcher, opus) - Deep concept analysis
+# Session ID: ee0b0536-5b06-4033-b483-97a8dceb3051
 
 # IMPORTANT: Gastown does NOT use the metadata JSON column
 # Instead, gastown uses DESCRIPTION-FIELD ENCODING (key:value lines)

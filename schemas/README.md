@@ -2,6 +2,13 @@
 
 **Centralized schema management** for multi-layer bead architecture (beads → gastown → ralph).
 
+**Source Agents**:
+- **a3c11b5** (schema-registry-researcher, opus) - Initial comprehensive schema analysis
+- **a23ff21** (gastown-terminology-updater, sonnet) - Gastown terminology documentation
+- **Session ID**: ee0b0536-5b06-4033-b483-97a8dceb3051
+
+Use claude-history tool to resurrect agents for schema questions.
+
 ## Purpose
 
 This registry provides:
