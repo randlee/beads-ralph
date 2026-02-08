@@ -87,3 +87,10 @@ Every sprint follows this pattern:
 **Agent Teams**: Enabled (experimental feature)
 
 ---
+
+## Initialization Process
+- Read Implementation Plan
+- Quick verification plan is up to date (i.e. commits/worktrees exist for next step, plan is not up to date)
+- Output concise project summary and status to user
+- Output a detailed plan for the next sprint using background parallel agents on dedicated sc-git-worktree(s)
+- Be prepared to begin the next sprint upon the users approval
