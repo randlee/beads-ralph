@@ -1,0 +1,100 @@
+{
+  "id": "bd-1-2a-work",
+  "title": "Create Example Work Bead",
+  "description": "Comprehensive example work bead demonstrating all required metadata fields for beads-ralph execution. This bead serves as a reference implementation for future work beads. It includes realistic values for a backend development sprint with parallel QA validation.",
+  "status": "open",
+  "priority": 1,
+  "issue_type": "beads-ralph-work",
+  "assignee": "beads-ralph-scrum-master",
+  "owner": null,
+  "dependencies": ["bd-1-1-schema"],
+  "labels": ["phase-01", "sprint-1-2a", "backend", "example"],
+  "comments": [],
+  "external_ref": null,
+  "created_at": "2026-02-08T15:00:00Z",
+  "updated_at": "2026-02-08T15:00:00Z",
+  "closed_at": null,
+  "metadata": {
+    "worktree_path": "/Users/randlee/Documents/github/beads-ralph-worktrees/feature/1-2a-work-bead",
+    "branch": "feature/1-2a-work-bead",
+    "source_branch": "develop",
+    "phase": "1",
+    "sprint": "1.2a",
+    "plan_file": "pm/2026-02-08-implementation-plan.md",
+    "plan_section": "## Phase 1 > ### Sprint 1.2a: Example Work Bead",
+    "plan_sprint_id": "1.2a",
+    "branches_to_merge": null,
+    "dev_agent_path": ".claude/agents/python-backend-dev",
+    "dev_model": "sonnet",
+    "dev_prompts": [
+      "Create examples/example-work-bead.json demonstrating all required fields from the bead schema",
+      "Include realistic metadata for a backend development sprint: use context from pm/2026-02-08-implementation-plan.md Sprint 1.2a",
+      "Populate dev_agent_path, dev_model, and dev_prompts with realistic values for a Python backend implementation task",
+      "Populate qa_agents with at least 2 QA agents including schema validator and design reviewer",
+      "Ensure all field types match bead_schema.py BeadMetadata class requirements",
+      "Validate the completed bead with: python3 scripts/validate-bead-schema.py examples/example-work-bead.json"
+    ],
+    "qa_agents": [
+      {
+        "agent_path": ".claude/agents/qa-schema-validator",
+        "model": "haiku",
+        "prompt": "Validate examples/example-work-bead.json using scripts/validate-bead-schema.py. Verify the bead passes all Pydantic model validators. Report pass/fail with detailed error messages if validation fails.",
+        "output_schema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "enum": ["pass", "fail", "stop"],
+              "description": "Validation status"
+            },
+            "message": {
+              "type": "string",
+              "description": "Validation result or error message"
+            },
+            "valid_fields": {
+              "type": "integer",
+              "description": "Number of fields that passed validation"
+            }
+          },
+          "required": ["status", "message"]
+        }
+      },
+      {
+        "agent_path": ".claude/agents/beads-schema-expert",
+        "model": "opus",
+        "prompt": "Review examples/example-work-bead.json for design completeness and accuracy. Check: (1) All required metadata fields are populated with realistic values, (2) Example demonstrates best practices from schema.md, (3) Dev/QA agent configurations are sensible and would execute properly, (4) Field values demonstrate understanding of the beads-ralph system.",
+        "output_schema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "enum": ["pass", "fail", "stop"]
+            },
+            "message": {
+              "type": "string"
+            },
+            "completeness_score": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "recommendations": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": ["status", "message"]
+        }
+      }
+    ],
+    "max_retry_attempts": 3,
+    "attempt_count": 0,
+    "scrum_master_session_id": null,
+    "dev_agent_session_id": null,
+    "dev_agent_executions": [],
+    "qa_agent_executions": [],
+    "pr_url": null,
+    "pr_number": null,
+    "scrum_result": null
+  }
+}
