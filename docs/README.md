@@ -91,7 +91,8 @@ beads-ralph/
 ├── src/
 │   └── (go application)
 └── scripts/
-    └── validate-bead-schema.py
+    ├── bead_schema.py              # Pydantic v2 models for schema validation
+    └── validate-bead-schema.py     # CLI tool using pydantic models
 ```
 
 ## Workflow Example

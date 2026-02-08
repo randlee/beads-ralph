@@ -15,6 +15,16 @@ This document references the following external repositories. These should be ch
 
 beads-ralph extends the standard beads schema by adding fields to the `Metadata` JSON object. All custom fields are stored in `Metadata` to avoid modifying beads core schema.
 
+### Implementation
+
+Schema validation is implemented using [pydantic v2](https://docs.pydantic.dev/) models in `scripts/bead_schema.py`. This provides:
+- Type safety and automatic validation
+- Detailed error messages with field paths
+- Reusable models for Python components
+- JSON schema export capabilities
+
+See `scripts/bead_schema.py` for complete model definitions.
+
 ## Core Bead Fields (Standard)
 
 These fields are part of the base beads schema and used as-is:
@@ -690,98 +700,53 @@ All beads-ralph beads MUST have:
 
 ### Python Validation Script
 
+The validation implementation uses pydantic v2 models (see `scripts/bead_schema.py`) for robust type checking and detailed error reporting. The CLI tool `scripts/validate-bead-schema.py` provides a command-line interface:
+
 ```python
 #!/usr/bin/env python3
+"""
+Bead schema validation CLI tool.
+
+Uses pydantic models from bead_schema.py for validation.
+Run: python scripts/validate-bead-schema.py <bead.json>
+"""
 import json
-import re
 import sys
+from pathlib import Path
 
-PHASE_PATTERN = re.compile(r'^[0-9]+[a-z]*$')
-SPRINT_PATTERN = re.compile(r'^[0-9]+[a-z]*\.[0-9]+[a-z]*$')
-VALID_MODELS = ["sonnet", "opus", "haiku"]
-VALID_STATUSES = ["pass", "fail", "stop"]
+# Import pydantic models
+from bead_schema import BeadRalphBead
 
-def validate_bead(bead):
-    errors = []
+def validate_bead_file(filepath: str) -> bool:
+    """Validate a bead JSON file using pydantic models."""
+    try:
+        with open(filepath) as f:
+            bead_data = json.load(f)
 
-    # Validate core fields
-    if not bead.get('title'):
-        errors.append("Missing or empty 'title'")
-    if bead.get('issue_type') not in ['beads-ralph-work', 'beads-ralph-merge']:
-        errors.append(f"Invalid issue_type: {bead.get('issue_type')}")
-    if bead.get('assignee') != 'beads-ralph-scrum-master':
-        errors.append(f"Invalid assignee: {bead.get('assignee')}")
+        # Pydantic will raise ValidationError if invalid
+        bead = BeadRalphBead.model_validate(bead_data)
 
-    # Validate metadata
-    metadata = bead.get('metadata', {})
+        print("✓ Bead schema is valid")
+        print(f"  ID: {bead.id}")
+        print(f"  Sprint: {bead.metadata.sprint}")
+        print(f"  Phase: {bead.metadata.phase}")
+        return True
 
-    # Required fields
-    required = ['worktree_path', 'branch', 'source_branch', 'phase', 'sprint',
-                'dev_agent_path', 'dev_model', 'dev_prompts', 'qa_agents']
-    for field in required:
-        if field not in metadata:
-            errors.append(f"Missing metadata.{field}")
-
-    # Phase/sprint pattern validation
-    if 'phase' in metadata and not PHASE_PATTERN.match(metadata['phase']):
-        errors.append(f"Invalid phase format: {metadata['phase']}")
-    if 'sprint' in metadata and not SPRINT_PATTERN.match(metadata['sprint']):
-        errors.append(f"Invalid sprint format: {metadata['sprint']}")
-
-    # Model validation
-    if metadata.get('dev_model') not in VALID_MODELS:
-        errors.append(f"Invalid dev_model: {metadata.get('dev_model')}")
-
-    # Dev prompts validation
-    dev_prompts = metadata.get('dev_prompts', [])
-    if not isinstance(dev_prompts, list) or len(dev_prompts) == 0:
-        errors.append("dev_prompts must be non-empty array")
-
-    # QA agents validation
-    qa_agents = metadata.get('qa_agents', [])
-    if not isinstance(qa_agents, list) or len(qa_agents) == 0:
-        errors.append("qa_agents must be non-empty array")
-    else:
-        for i, qa in enumerate(qa_agents):
-            if not qa.get('agent_path'):
-                errors.append(f"qa_agents[{i}]: missing agent_path")
-            if qa.get('model') not in VALID_MODELS:
-                errors.append(f"qa_agents[{i}]: invalid model")
-            if not qa.get('prompt'):
-                errors.append(f"qa_agents[{i}]: missing prompt")
-
-            # Validate output schema
-            output_schema = qa.get('output_schema', {})
-            props = output_schema.get('properties', {})
-            if 'status' not in props:
-                errors.append(f"qa_agents[{i}]: output_schema missing 'status' property")
-            else:
-                status_enum = props['status'].get('enum', [])
-                if not all(s in VALID_STATUSES for s in status_enum):
-                    errors.append(f"qa_agents[{i}]: invalid status enum values")
-            if 'message' not in props:
-                errors.append(f"qa_agents[{i}]: output_schema missing 'message' property")
-
-    return errors
+    except Exception as e:
+        print("✗ Validation errors:")
+        print(f"  {e}")
+        return False
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
         print("Usage: validate-bead-schema.py <bead.json>")
         sys.exit(1)
 
-    with open(sys.argv[1]) as f:
-        bead = json.load(f)
-
-    errors = validate_bead(bead)
-    if errors:
-        print("Validation errors:")
-        for error in errors:
-            print(f"  - {error}")
-        sys.exit(1)
-    else:
-        print("Bead schema is valid")
-        sys.exit(0)
+    success = validate_bead_file(sys.argv[1])
+    sys.exit(0 if success else 1)
 ```
+
+For complete pydantic model definitions including all validation logic, see `scripts/bead_schema.py`.
 
 ## Schema Evolution
 
