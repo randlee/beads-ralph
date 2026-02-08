@@ -87,11 +87,3 @@ Every sprint follows this pattern:
 **Agent Teams**: Enabled (experimental feature)
 
 ---
-
-## Next Action
-
-Begin **Sprint 1.1: Core Schema Validation Script**
-- Create Python validator for bead schema
-- Implement phase/sprint pattern validation
-- Add comprehensive unit tests
-- Set foundation for Phase 2 (beads-architect agent)

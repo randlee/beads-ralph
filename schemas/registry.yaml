@@ -1,0 +1,100 @@
+# beads-ralph Schema Registry
+# Version tracking and composition for multi-layer schema
+
+schema_version: "1.0"
+created: "2026-02-08"
+last_updated: "2026-02-08"
+
+# Upstream dependencies
+upstream:
+  beads:
+    version: "v0.49.4-52-g249609de"
+    commit: "249609de0c8ec4e9d8e936d3ecdcca7e4e8d5f06"
+    repo: "../beads"
+    repo_url: "https://github.com/steveyegge/beads.git"
+    schema_source: "internal/storage/sqlite/schema.go"
+    types_source: "internal/types/types.go"
+    last_checked: "2026-02-08"
+    notes: "Base schema has 43 SQL columns; additional columns added via migrations"
+
+  gastown:
+    version: "v0.5.0-329-g7cf6e82d"
+    commit: "7cf6e82dcca510c4e1e62d2c9fe3ef1e31139386"
+    repo: "../gastown"
+    repo_url: "https://github.com/steveyegge/gastown.git"
+    schema_source: "internal/beads/"
+    last_checked: "2026-02-08"
+    notes: "Gastown uses description-field encoding, NOT metadata JSON"
+
+# Schema composition layers
+layers:
+  - name: "base"
+    source: "schemas/base/beads-v0.49.4.yaml"
+    description: "Core beads fields from SQL schema (43 base columns + migrations)"
+    extension_mechanism: "SQL columns"
+
+  - name: "gastown-extensions"
+    source: "schemas/extensions/gastown-v0.5.0.yaml"
+    description: "Gastown extensions via description-field encoding"
+    extension_mechanism: "description text (key:value lines) + labels"
+    field: "description"
+    notes: "Does NOT use metadata JSON column"
+
+  - name: "ralph-extensions"
+    source: "schemas/extensions/ralph-v0.1.0.yaml"
+    description: "beads-ralph metadata extensions"
+    extension_mechanism: "metadata JSON column"
+    field: "metadata"
+    notes: "22 custom fields in metadata JSON"
+
+# Compiled schema outputs
+compiled_schema:
+  full_schema: "schemas/compiled/full-schema.yaml"
+  pydantic_models: "scripts/bead_schema.py"
+  validation_script: "scripts/validate-bead-schema.py"
+  documentation: "docs/schema.md"
+
+# Extension mechanism comparison
+extension_mechanisms:
+  gastown:
+    field: "description"
+    format: "key: value lines in freetext"
+    pros: "Works without schema changes"
+    cons: "Fragile parsing, conflicts with human text"
+
+  ralph:
+    field: "metadata"
+    format: "JSON object"
+    pros: "Type-safe, purpose-built, clean separation"
+    cons: "Requires metadata column (added in beads migration 042)"
+
+# Conflict analysis
+conflicts:
+  gastown_vs_ralph: "None - different extension mechanisms"
+  field_overlap: "Zero - gastown uses description, ralph uses metadata"
+  integration_notes: |
+    If beads-ralph beads need processing by gastown agents:
+    - Gastown Issue struct lacks Metadata field
+    - Would need gastown extension or direct bd CLI usage
+    - Use `bd show <id> --json` to access full bead including metadata
+
+# Discrepancies identified
+discrepancies:
+  count: 6
+  severity: "Medium-High"
+  documentation: "schemas/DISCREPANCIES.md"
+  action_items:
+    - "Update github-research/beads/database-schema-architecture.md"
+    - "Update github-research/gastown/agent-communications.md"
+    - "Consider PRs to upstream repos for doc fixes"
+
+# Change detection
+change_detection:
+  method: "Manual periodic checks"
+  frequency: "Monthly or when upstream versions change"
+  checklist:
+    - "git fetch in ../beads and ../gastown"
+    - "Check for new tags/releases"
+    - "Review schema.go for column additions"
+    - "Check migrations/ for new migrations"
+    - "Update registry versions and layer files"
