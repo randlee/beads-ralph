@@ -546,12 +546,14 @@ This plan implements beads-ralph MVP using the system itself (dogfooding). Each 
 - [ ] Create `src/go.mod` (module: github.com/randlee/beads-ralph)
 - [ ] Create `src/main.go` with CLI entry point
 - [ ] Create `src/ralph/loop.go` with main loop skeleton
-- [ ] Define `Bead` struct matching schema metadata
+- [ ] Define `Bead` struct matching schema metadata (including `TeamName` field)
+- [ ] Define `BeadMetadata` struct with `TeamName string` field
 - [ ] Define `ScrumResult` struct for scrum-master output
 - [ ] Implement `findReadyBeads()` calling `bd ready --json`
-- [ ] Implement `groupBySprint()` function
+- [ ] Implement `groupByTeam()` function (groups by `metadata.team_name`, NOT sprint)
 - [ ] Add basic logging setup
 - [ ] Create `src/ralph/loop_test.go` with unit tests
+- [ ] **Agent validation**: Add check that agent paths exist in `.claude/agents/` (at review time)
 
 **Acceptance Criteria**:
 - Project compiles successfully

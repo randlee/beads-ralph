@@ -62,6 +62,16 @@ All beads-ralph-specific fields are stored in the `Metadata` JSON object:
 | `source_branch` | string | Yes | Branch to create worktree from (e.g., "main") |
 | `phase` | string | Yes | Phase number (e.g., "1", "3a", "3ab") |
 | `sprint` | string | Yes | Sprint number (e.g., "1.1", "3a.2b") |
+| `team_name` | string | Yes | Team grouping identifier - **PRIMARY GROUPING KEY** for Ralph loop (e.g., "sprint-2.1-ui", "feature-auth-team") |
+
+**Team Name Grouping**:
+- **Critical**: Ralph loop groups beads by `team_name`, NOT by sprint or branch
+- **One Claude session per team**: All beads with same `team_name` execute in one scrum-master session
+- **Architect's choice**: beads-mason decides team composition based on plan structure
+- **Examples**:
+  - One team, multiple branches: team_name="sprint-2.1-ui" for 3 devs on parallel branches
+  - Sequential workflow: team_name="sprint-3.1-auth" for dev→review→fix→qa on one branch
+  - Isolated teams: team_name="sprint-2.1a-backend", team_name="sprint-2.1b-frontend" for separate teams
 
 ### Plan Tracking (Bi-directional)
 
@@ -128,9 +138,16 @@ The **beads-mason agent** is responsible for parsing phase/sprint numbers and ge
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `dev_agent_path` | string | Yes | Path to dev agent (e.g., ".claude/agents/backend-dev") |
+| `dev_agent_path` | string | Yes | Path to dev agent (e.g., ".claude/agents/backend-dev") - **MUST exist** in `.claude/agents/` or be default Claude agent |
 | `dev_model` | string | Yes | Model for dev agent ("sonnet", "opus", "haiku") |
 | `dev_prompts` | string[] | Yes | Array of prompts for dev agent |
+| `agent_type` | string | Yes | Agent role: "dev", "qa", "code-review", "merge", "docs" |
+
+**Agent Path Validation**:
+- **At review time**: beads-mason MUST validate that `dev_agent_path` exists in `.claude/agents/` directory
+- **Default agents**: Can use "claude" for default Claude agent (no file required)
+- **Custom agents**: Path must point to existing `.md` file in `.claude/agents/`
+- **Error handling**: Invalid paths should be caught during bead creation, not execution
 
 ### QA Agent Configuration
 
@@ -142,9 +159,10 @@ The **beads-mason agent** is responsible for parsing phase/sprint numbers and ge
 
 ```json
 {
-  "agent_path": "string",      // Path to QA agent (e.g., ".claude/agents/qa-unit-tests")
+  "agent_path": "string",      // Path to QA agent (e.g., ".claude/agents/qa-unit-tests") - MUST exist in .claude/agents/
   "model": "string",           // Model for QA agent ("sonnet", "opus", "haiku")
   "prompt": "string",          // Prompt for QA agent
+  "agent_type": "string",      // Agent role: "qa", "code-review", "security-scan", etc.
   "input_schema": {            // JSON Schema for QA input (optional)
     "type": "object",
     "properties": {
@@ -675,18 +693,29 @@ All beads-ralph beads MUST have:
    - `source_branch` (non-empty)
    - `phase` (matches phase pattern)
    - `sprint` (matches sprint pattern)
+   - `team_name` (non-empty, used for Ralph loop grouping)
    - `plan_file` (path to plan file)
    - `plan_section` (section identifier in plan)
    - `plan_sprint_id` (sprint ID as in plan)
-   - `dev_agent_path` (valid path to agent file)
+   - `dev_agent_path` (valid path to agent file - MUST exist in `.claude/agents/`)
    - `dev_model` (one of: "sonnet", "opus", "haiku")
    - `dev_prompts` (non-empty array)
+   - `agent_type` (one of: "dev", "qa", "code-review", "merge", "docs")
    - `qa_agents` (non-empty array of valid QAAgent objects)
 
 3. **QA Agent Validation**:
-   - Each QA agent MUST have: `agent_path`, `model`, `prompt`, `output_schema`
+   - Each QA agent MUST have: `agent_path`, `model`, `prompt`, `agent_type`, `output_schema`
+   - `agent_path` MUST exist in `.claude/agents/` directory (validated at review time)
+   - `agent_type` MUST be one of: "qa", "code-review", "security-scan", "lint", "integration-test"
    - `output_schema` MUST define `status` field with enum ["pass", "fail", "stop"]
    - `output_schema` MUST define `message` field
+
+4. **Agent Path Validation Rules**:
+   - **At bead creation**: beads-mason MUST check that agent paths exist
+   - **Validation tool**: `scripts/validate-bead-schema.py` checks file existence
+   - **Default agents**: "claude" is valid without file (default Claude agent)
+   - **Custom agents**: Must be `.md` files in `.claude/agents/` directory
+   - **Error message**: "Agent path '{path}' does not exist in .claude/agents/"
 
 ### Pattern Validation
 

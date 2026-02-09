@@ -31,7 +31,7 @@ Plan (markdown) → Planning Skill → Beads → Go Ralph Loop → Scrum-Masters
 1. **Chronicler Skill** (`.claude/skills/beads-chronicler/SKILL.md`)
    - Chronicles plan into beads database
    - Delegates to mason (direct beads) or smelter (formulas)
-   - Creates convoy tracking containers
+   - Creates tracking containers
    - Orchestrates plan annotation
 
 2. **Mason Agent** (`.claude/agents/beads-mason.md`)
@@ -52,7 +52,7 @@ Plan (markdown) → Planning Skill → Beads → Go Ralph Loop → Scrum-Masters
    - Uses `bd mol pour` / `bd mol wisp`
    - Creates molecules and beads from templates
 
-5. **Scribe Agent** (`.claude/agents/beads-scribe-requirements.txt`)
+5. **Scribe Agent** (`.claude/agents/beads-scribe.md`)
    - Maintains record-keeping (double-ledger)
    - Annotates plan on bead creation
    - Updates plan on bead completion
@@ -64,14 +64,17 @@ Plan (markdown) → Planning Skill → Beads → Go Ralph Loop → Scrum-Masters
    - Dry-run and wisp validation
 
 7. **Go Ralph Loop** (`src/` - Phase 4)
-   - Finds ready beads per sprint
-   - Launches parallel scrum-master Claude sessions
-   - Monitors completion and advances sprints
+   - Finds ready beads (via `bd ready`)
+   - **Groups by team_name** (metadata.team_name is PRIMARY GROUPING KEY)
+   - Launches parallel scrum-master Claude sessions (one per team)
+   - Monitors completion and advances teams
    - Handles failures and rollback
 
 8. **Scrum-Master Agent** (`.claude/agents/beads-ralph-scrum-master.md` - Phase 5)
+   - **One session per team**: Receives all beads with same team_name
    - Creates/verifies worktrees
-   - Launches dev agents
+   - **Uses agent-teams**: Coordinates multiple dev/QA agents via TeamCreate
+   - Launches dev agents with agent validation (paths must exist)
    - Runs QA validation loops
    - Creates PRs and updates beads
 
@@ -100,9 +103,12 @@ Plan (markdown) → Planning Skill → Beads → Go Ralph Loop → Scrum-Masters
 
 ## Key Features
 
-- **Parallel Sprint Execution** - Multiple agents work simultaneously in isolated worktrees
+- **Team-Based Execution** - Beads grouped by team_name (architect decides composition)
+- **Flexible Teams** - One team with multiple devs, or sequential workflows, or isolated teams
+- **Agent-Teams Integration** - Scrum-master uses TeamCreate to coordinate dev/QA agents
 - **Atomic Work Claiming** - Race-free bead claiming via `bd claim`
 - **Built-in QA Loops** - Dev agents retry based on QA feedback (max N attempts)
+- **Agent Validation** - Agent paths validated at review time (must exist in .claude/agents/)
 - **Merge Sprints** - Dedicated sprints for branch integration
 - **Complete Audit Trail** - Full git history for rollback and review
 - **PR-Based Review** - Output is series of unmerged PRs for human review
@@ -140,9 +146,10 @@ vim pm/implementation-plan.md
 /beads-chronicler pm/implementation-plan.md
 
 # This creates:
-# - Beads for each sprint
-# - Convoy tracking containers
+# - Beads for each sprint with team_name grouping
+# - Tracking containers
 # - Plan annotations with bead IDs
+# - Agent path validation (all paths must exist)
 
 # 3. Verify beads created
 bd list --json

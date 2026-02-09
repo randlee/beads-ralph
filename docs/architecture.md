@@ -52,10 +52,10 @@ beads-ralph is a Go-based orchestration system that coordinates multiple Claude 
 │                Go Ralph Loop (Orchestrator)                     │
 │  ┌──────────────────────────────────────────────────────────┐  │
 │  │ 1. Find ready beads (bd ready)                           │  │
-│  │ 2. Group by sprint                                       │  │
-│  │ 3. Launch parallel scrum-master sessions                 │  │
+│  │ 2. Group by team_name (metadata.team_name)               │  │
+│  │ 3. Launch parallel scrum-master sessions (one per team)  │  │
 │  │ 4. Monitor completion                                    │  │
-│  │ 5. Advance to next sprint                                │  │
+│  │ 5. Advance to next team                                  │  │
 │  └──────────────────────────────────────────────────────────┘  │
 └────────────────────────────────────────────────────────────────┘
                               ↓
@@ -255,17 +255,17 @@ func ralphLoop(ctx context.Context, config Config) error {
             break
         }
 
-        // 2. Group by sprint
-        sprintGroups := groupBySprint(readyBeads)
-        log.Infof("Found %d sprint(s) ready: %v", len(sprintGroups), sprintNames(sprintGroups))
+        // 2. Group by team
+        teamGroups := groupByTeam(readyBeads)
+        log.Infof("Found %d team(s) ready: %v", len(teamGroups), teamNames(teamGroups))
 
-        // 3. Launch parallel scrum-masters (one per bead)
+        // 3. Launch parallel scrum-masters (one Claude session per team)
         var wg sync.WaitGroup
-        results := make(chan ScrumResult, len(readyBeads))
+        results := make(chan ScrumResult, len(teamGroups))
         semaphore := make(chan struct{}, config.MaxParallelSessions)
 
-        for sprint, beads := range sprintGroups {
-            log.Infof("Starting sprint %s with %d bead(s)", sprint, len(beads))
+        for teamName, beads := range teamGroups {
+            log.Infof("Starting team %s with %d bead(s)", teamName, len(beads))
 
             for _, bead := range beads {
                 wg.Add(1)
@@ -337,17 +337,22 @@ func findReadyBeads(ctx context.Context, config Config) ([]Bead, error) {
 }
 ```
 
-**groupBySprint**:
+**groupByTeam**:
 ```go
-func groupBySprint(beads []Bead) map[string][]Bead {
+func groupByTeam(beads []Bead) map[string][]Bead {
     groups := make(map[string][]Bead)
     for _, bead := range beads {
-        sprint := bead.Metadata.Sprint
-        groups[sprint] = append(groups[sprint], bead)
+        teamName := bead.Metadata.TeamName
+        groups[teamName] = append(groups[teamName], bead)
     }
     return groups
 }
 ```
+
+**Note**: Beads are grouped by `metadata.team_name`, not by sprint number. This allows flexible team composition:
+- **Scenario 1**: One team with multiple devs on different branches (all beads share same team_name)
+- **Scenario 2**: Sequential dev→review→fix→qa workflow (all beads in one team_name)
+- **Scenario 3**: Multiple isolated teams for parallel sprints (different team_name values)
 
 **runScrumMaster**:
 ```go
@@ -403,20 +408,28 @@ func runScrumMaster(ctx context.Context, bead Bead, config Config) ScrumResult {
 
 ---
 
-### 3. Scrum-Master Agent
+### 3. Scrum-Master Agent & Agent-Teams Integration
 
 **Type**: Claude Code Agent (`.claude/agents/beads-ralph-scrum-master.md`)
 
 **Responsibilities**:
-- Read bead and extract metadata
-- Create/verify worktree using sc-git-worktree skill
-- Launch dev agent with prompts from bead
+- Read all beads for this team (from `team_name` grouping)
+- Create/verify worktrees using sc-git-worktree skill
+- **Use Claude Agent-Teams**: Coordinate multiple agents via TeamCreate
+- Launch dev agents with prompts from beads
 - Monitor dev agent completion
 - Launch QA agents in background
 - Implement dev/QA retry loop
-- Create PR using gh CLI
-- Update bead status and metadata
+- Create PRs using gh CLI
+- Update bead statuses and metadata
 - Return structured JSON result
+
+**Agent-Teams Integration**:
+- **One Claude session per team**: Ralph loop groups beads by `metadata.team_name`
+- **Scrum-master orchestrates team**: Uses TeamCreate to coordinate dev/QA agents
+- **Flexible team composition**: beads-mason decides team structure (architect's choice)
+  - Example: 3 devs on 3 branches, one team (team_name: "sprint-2.1-ui")
+  - Example: dev→review→fix→qa sequential, one team (team_name: "sprint-3.1-auth")
 
 #### 3.1 Scrum-Master Workflow
 
