@@ -233,7 +233,7 @@ This plan implements beads-ralph MVP using the system itself (dogfooding). Each 
 - `qa-code-review` (opus) - Review agent design and completeness
 
 **Tasks**:
-- [ ] Create `.claude/agents/beads-architect.md`
+- [ ] Create `.claude/agents/beads-mason.md`
 - [ ] Define agent role: convert plan markdown to bead JSON
 - [ ] Add instructions for parsing phase/sprint numbers
 - [ ] Add instructions for extracting dev/QA agent requirements
@@ -269,7 +269,7 @@ This plan implements beads-ralph MVP using the system itself (dogfooding). Each 
 - `qa-code-review` (opus) - Review logic completeness
 
 **Tasks**:
-- [ ] Add to beads-architect.md: dependency compilation rules
+- [ ] Add to beads-mason.md: dependency compilation rules
 - [ ] Sequential sprints: `1.1 → 1.2` maps to `1.2 depends on [1.1]`
 - [ ] Parallel sprints: `1.2a`, `1.2b` both depend on `1.1`, not each other
 - [ ] Merge sprints: `1.3` depends on `[1.2a, 1.2b]`
@@ -304,7 +304,7 @@ This plan implements beads-ralph MVP using the system itself (dogfooding). Each 
 - `qa-code-review` (opus) - Review implementation approach
 
 **Tasks**:
-- [ ] Add to beads-architect.md: plan back-annotation instructions
+- [ ] Add to beads-mason.md: plan back-annotation instructions
 - [ ] Define HTML comment format: `<!-- beads-ralph: bd-abc123 -->`
 - [ ] Add instructions for inserting after sprint headings
 - [ ] Define mapping: sprint ID → bead ID
@@ -339,12 +339,12 @@ This plan implements beads-ralph MVP using the system itself (dogfooding). Each 
 - `qa-code-review` (opus) - Completeness check
 
 **Tasks**:
-- [ ] Merge 2.2a and 2.2b into beads-architect.md
+- [ ] Merge 2.2a and 2.2b into beads-mason.md
 - [ ] Add complete workflow: plan input → bead JSON output
 - [ ] Include validation step using validate-bead-schema.py
 - [ ] Add error handling instructions (malformed plan, missing fields)
 - [ ] Create `examples/test-plan.md` (simple 2-3 sprint plan)
-- [ ] Test: Run beads-architect agent against test-plan.md
+- [ ] Test: Run beads-mason agent against test-plan.md
 - [ ] Verify: Generated beads pass validation
 - [ ] Verify: Dependencies are correct
 
@@ -377,7 +377,7 @@ This plan implements beads-ralph MVP using the system itself (dogfooding). Each 
 - `beads-explore-agent` (haiku) - Research Claude Code skill format
 
 **QA Agents**:
-- `beads-schema-expert` (opus) - Verify skill integrates with beads-architect
+- `beads-schema-expert` (opus) - Verify skill integrates with beads-mason
 - `qa-code-review` (opus) - Review skill design
 
 **Tasks**:
@@ -386,14 +386,14 @@ This plan implements beads-ralph MVP using the system itself (dogfooding). Each 
 - [ ] Add instructions: work with user to refine plan structure
 - [ ] Add instructions: validate phase/sprint organization
 - [ ] Add instructions: check for parallel execution opportunities
-- [ ] Add instructions: delegate to beads-architect for bead creation
+- [ ] Add instructions: delegate to beads-mason for bead creation
 - [ ] Add instructions: run plan-review agent for validation
 - [ ] Include workflow diagram in comments
 
 **Acceptance Criteria**:
 - Skill follows Claude Code skill format
 - Workflow is clear: refine → architect → review → create
-- Integration points with beads-architect specified
+- Integration points with beads-mason specified
 - User interaction patterns defined
 
 **Agent-Teams Review**:
@@ -969,7 +969,7 @@ This plan implements beads-ralph MVP using the system itself (dogfooding). Each 
 
 ### Key Deliverables
 - [ ] Schema validation script (`scripts/validate-bead-schema.py`)
-- [ ] Beads architect agent (`.claude/agents/beads-architect.md`)
+- [ ] Beads architect agent (`.claude/agents/beads-mason.md`)
 - [ ] Planning skill (`.claude/skills/beads-ralph-planner/SKILL.md`)
 - [ ] Plan review agent (`.claude/agents/plan-review.md`)
 - [ ] Go ralph loop (`src/`)

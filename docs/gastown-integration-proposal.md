@@ -243,7 +243,7 @@ dev_agent_path = "{{dev_agent}}"
 - Standardized structure
 - Easy to modify patterns
 
-**Recommendation**: **Implement in Phase 2** (Sprint 2.1-2.3, during beads-architect development)
+**Recommendation**: **Implement in Phase 2** (Sprint 2.1-2.3, during beads-mason development)
 
 ---
 

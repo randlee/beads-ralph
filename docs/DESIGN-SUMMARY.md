@@ -157,7 +157,7 @@ Go Ralph Loop
 
 **Agents**:
 1. **beads-ralph-planner** (skill) - Works with user to refine plan
-2. **beads-architect** (agent) - Converts plan to beads
+2. **beads-mason** (agent) - Converts plan to beads
 3. **plan-review** (agent) - Validates schema and dependencies
 
 **Benefits**:
@@ -317,7 +317,7 @@ Each scenario includes:
 
 - [ ] Define beads-ralph-scrum-master agent
 - [ ] Define beads-ralph-planner skill
-- [ ] Define beads-architect agent
+- [ ] Define beads-mason agent
 - [ ] Define plan-review agent
 - [ ] Define example dev agents (backend, frontend, merge)
 - [ ] Define example QA agents (tests, security, lint)
@@ -325,7 +325,7 @@ Each scenario includes:
 **Deliverables**:
 - `.claude/agents/beads-ralph-scrum-master.md`
 - `.claude/skills/beads-ralph-planner/SKILL.md`
-- `.claude/agents/beads-architect.md`
+- `.claude/agents/beads-mason.md`
 - `.claude/agents/plan-review.md`
 - `.claude/agents/backend-dev.md` (example)
 - `.claude/agents/qa-unit-tests.md` (example)

@@ -720,7 +720,7 @@ Bead C depends on Bead A  ← Cycle!
        return False
    ```
 
-2. **Validation in beads-architect agent**
+2. **Validation in beads-mason agent**
 3. **Error if cycle detected**: Refuse to create beads
 
 **beads Built-in Protection**:

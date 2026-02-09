@@ -1,0 +1,46 @@
+# Beads Mason Agent Summary
+
+## Agent Details
+- **Name**: beads-mason
+- **Version**: 2.0.0
+- **File**: .claude/agents/beads-mason.md
+- **Role**: Plan → Bead conversion with direct database insertion via bd CLI
+
+## Compliance Checklist
+
+### YAML Frontmatter ✓
+- [x] name: beads-mason
+- [x] version: 2.0.0
+- [x] description: Converts implementation plans into validated beads inserted into the Dolt database
+
+### Required Structure ✓
+- [x] Purpose section
+- [x] Inputs section (plan_file_path, sprint_filter, annotate_plan, mode)
+- [x] Execution Steps section (7 steps)
+- [x] Output Format section (fenced JSON, minimal envelope)
+- [x] Dependency algorithm (pseudocode + DAG validation)
+- [x] Plan back-annotation algorithm
+- [x] Error codes list
+
+### Agent Guidelines Compliance ✓
+- [x] Single responsibility: direct plan → bead insertion
+- [x] Fenced JSON output with minimal envelope
+- [x] Structured error responses with codes
+- [x] Clear input/output contracts
+- [x] Database-first workflow (bd create --json)
+
+## Key Features
+1. **Database Integration**: Always inserts via bd CLI (no file writes)
+2. **Dependency Resolution**: Sequential, parallel, merge, phase split, converge
+3. **Schema Alignment**: Matches scripts/bead_schema.py (metadata object)
+4. **Validation**: Pydantic validation before insertion
+5. **Back-Annotation**: Optional plan annotations
+
+## Dependencies
+- scripts/bead_schema.py
+- scripts/validate-bead-schema.py
+- bd CLI (bd create / bd show / bd info)
+
+## Notes
+- Formula design: beads-alchemist
+- Formula pours: beads-smelter

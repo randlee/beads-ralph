@@ -27,7 +27,7 @@ beads-ralph is a Go-based orchestration system that coordinates multiple Claude 
 │  └──────────────────────────────────────────────────────────┘  │
 │                              ↓                                  │
 │  ┌──────────────────────────────────────────────────────────┐  │
-│  │ beads-architect agent                                    │  │
+│  │ beads-mason agent                                    │  │
 │  │  • Converts plan to beads with extended schema           │  │
 │  │  • Creates merge beads for integration                   │  │
 │  │  • Sets up dependency chains for sprints                 │  │
@@ -108,7 +108,7 @@ beads-ralph is a Go-based orchestration system that coordinates multiple Claude 
 - Work with user to refine plan structure
 - Validate phase/sprint organization
 - Ensure plan is optimized for parallel execution
-- Delegate to beads-architect for bead creation
+- Delegate to beads-mason for bead creation
 
 **Input**:
 ```markdown
@@ -141,9 +141,9 @@ beads-ralph is a Go-based orchestration system that coordinates multiple Claude 
 
 **Output**: Validated plan ready for bead creation
 
-#### 1.2 beads-architect Agent
+#### 1.2 beads-mason Agent
 
-**Type**: Claude Code Agent (`.claude/agents/beads-architect.md`)
+**Type**: Claude Code Agent (`.claude/agents/beads-mason.md`)
 
 **Responsibilities**:
 - Convert finalized plan into beads with extended schema
@@ -677,7 +677,7 @@ User → beads-ralph-planner skill
        ↓
 plan.md (validated)
        ↓
-beads-architect agent
+beads-mason agent
        ↓
 beads_definitions.json
        ↓

@@ -1,0 +1,10 @@
+agents:
+  beads-mason:
+    version: 2.0.0
+    path: .claude/agents/beads-mason.md
+  beads-alchemist:
+    version: 1.0.0
+    path: .claude/agents/beads-alchemist.md
+  beads-smelter:
+    version: 1.0.0
+    path: .claude/agents/beads-smelter.md
