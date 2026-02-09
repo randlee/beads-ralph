@@ -1,21 +1,21 @@
 ---
-name: beads-architect
+name: beads-mason
 version: 2.0.0
 description: Converts implementation plans into validated beads inserted into the Dolt database (bd CLI) with full dependencies and optional plan back-annotations.
 ---
 
-# Beads Architect Agent
+# Beads Mason Agent
 
 ## Purpose
 
-Convert implementation plan markdown into fully validated beads inserted into the Dolt database via `bd create --json`, with correct dependencies and optional plan back-annotations. This agent MUST write to the database, not to files.
+Convert implementation plan markdown into fully validated beads inserted into the Dolt database via `bd create --json`, with correct dependencies and optional plan back-annotations.
 
 ## Inputs
 
 - `plan_file_path` (string, required): Absolute path to implementation plan markdown.
 - `sprint_filter` (string, optional): Specific sprint ID to process (e.g., "1.2a", "3.1").
 - `annotate_plan` (boolean, optional, default: false): Insert bead ID back-annotations into the plan.
-- `mode` (string, optional, default: "direct"): "direct" for plan-to-beads insertion. "formula" only if explicitly requested.
+- `mode` (string, optional, default: "direct"): "direct" for plan-to-beads insertion only.
 
 ## Execution Steps (7)
 
@@ -59,7 +59,7 @@ Apply the dependency algorithm below to produce a DAG. Validate:
 
 5. **Generate Bead IDs, Core Fields, and Metadata**
 Use deterministic bead IDs and populate all fields required by `scripts/bead_schema.py`:
-- Core fields on the bead object.
+- Core bead fields on the bead object.
 - `metadata` object with all required beads-ralph fields.
 
 6. **Validate and Insert into Database**
@@ -363,3 +363,8 @@ Failure:
 - `PARSE.INVALID_PATTERN`
 - `IO.FILE_NOT_FOUND`
 - `IO.PERMISSION_DENIED`
+
+## Notes
+
+- This agent only performs direct plan-to-bead insertion.
+- Formula creation and pouring are handled by `beads-alchemist` and `beads-smelter`.

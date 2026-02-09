@@ -1,4 +1,4 @@
-# Beads-Architect Agent Requirements
+# Beads-Mason Agent Requirements
 
 **Version**: 2.0.0
 **Status**: Draft
@@ -8,10 +8,10 @@
 
 ## Overview
 
-The beads-architect agent is responsible for converting implementation plan markdown into executable beads and formulas in the Dolt database. It serves as the bridge between human-readable planning documents and the beads execution system.
+The beads-mason agent is responsible for converting implementation plan markdown into executable beads and formulas in the Dolt database. It serves as the bridge between human-readable planning documents and the beads execution system.
 
 **Primary Responsibility**: Convert implementation plans to beads (direct insertion)
-**Secondary Responsibility**: Generate formulas and pour them (template-based generation)
+**Secondary Responsibility**: Identify formula opportunities and delegate to beads-alchemist (design) and beads-smelter (pour) via the convoy skill
 
 ---
 
@@ -948,7 +948,7 @@ For each bead:
 
 **Agent Invocation**:
 ```bash
-beads-architect \
+beads-mason \
   --plan-file pm/2026-02-08-implementation-plan.md \
   --sprint-filter 1.1
 ```
@@ -1065,7 +1065,7 @@ bd show bd-1-1-schema --json
 
 **Agent Invocation**:
 ```bash
-beads-architect \
+beads-mason \
   --plan-file pm/2026-02-08-implementation-plan.md \
   --sprint-filter "1.2a,1.2b,1.3"
 ```

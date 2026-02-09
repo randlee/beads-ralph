@@ -149,7 +149,7 @@ Coverage:
 
 This schema validator will be used by:
 
-1. **beads-architect** (Phase 2) - Validate generated beads before storage
+1. **beads-mason** (Phase 2) - Validate generated beads before storage
 2. **scrum-master** (Phase 4) - Validate bead updates after dev/QA execution
 3. **CI/CD pipeline** (Phase 6) - Validate all bead files in repository
 4. **Developer tools** - Pre-flight checks before creating beads

@@ -6,7 +6,7 @@ Comprehensive test suite for the beads-ralph autonomous development orchestratio
 
 ### tests/test_beads_architect/
 
-Tests for the beads-architect agent that converts implementation plans to executable beads.
+Tests for the beads-mason agent that converts implementation plans to executable beads.
 
 #### Test Modules
 
@@ -297,11 +297,11 @@ pytest tests/test_beads_architect/test_validation.py --cov=scripts/validate-bead
 - [pytest documentation](https://docs.pytest.org/)
 - [pytest-cov documentation](https://pytest-cov.readthedocs.io/)
 - [beads-ralph schema documentation](../docs/schema.md)
-- [beads-architect agent definition](../.claude/agents/beads-architect.md)
+- [beads-mason agent definition](../.claude/agents/beads-mason.md)
 
 ## Questions?
 
 For questions about testing strategy or adding new tests, consult:
 - Implementation plan: `pm/2026-02-08-implementation-plan.md`
 - Schema documentation: `docs/schema.md`
-- Agent definition: `.claude/agents/beads-architect.md`
+- Agent definition: `.claude/agents/beads-mason.md`

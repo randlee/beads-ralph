@@ -122,7 +122,7 @@ Execution:
   Iteration 3: bd ready → [bd-ddd]         (1.3 after both)
 ```
 
-The **beads-architect agent** is responsible for parsing phase/sprint numbers and generating correct dependency relationships when creating beads.
+The **beads-mason agent** is responsible for parsing phase/sprint numbers and generating correct dependency relationships when creating beads.
 
 ### Dev Agent Configuration
 

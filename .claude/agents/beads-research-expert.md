@@ -193,7 +193,7 @@ Examples:
 ### When to Consult This Agent
 
 1. **Before creating beads** - Validate schema, CLI usage, database operations
-2. **Before updating beads-architect** - Review for beads API compliance
+2. **Before updating beads-mason** - Review for beads API compliance
 3. **Database operations** - Confirm Dolt patterns, no SQLite assumptions
 4. **CLI integration** - Verify `bd` command usage, output parsing
 5. **Schema extensions** - Check compatibility with upstream beads
@@ -262,7 +262,7 @@ Return structured JSON with validation results:
       "severity": "error",
       "category": "cli",
       "message": "bd create must use --json flag for machine-readable output",
-      "location": "beads-architect.md line 123",
+      "location": "beads-mason.md line 123",
       "suggestion": "Add --json flag: bd create \"Title\" --json"
     }
   ]
@@ -282,7 +282,7 @@ Return structured JSON with validation results:
       "severity": "error",
       "category": "database",
       "message": "Direct file writes bypass Dolt database and daemon",
-      "location": "beads-architect.md line 156",
+      "location": "beads-mason.md line 156",
       "suggestion": "Use 'bd create' CLI to persist to Dolt database"
     }
   ],
@@ -307,7 +307,7 @@ Return structured JSON with validation results:
       "severity": "error",
       "category": "schema",
       "message": "Invalid ID prefix 'br-', should be 'bd-'",
-      "location": "beads-architect.md line 89",
+      "location": "beads-mason.md line 89",
       "suggestion": "Use bd- prefix: bd-1-2a-work"
     }
   ],

@@ -30,10 +30,10 @@ Plan (markdown) → Planning Skill → Beads → Go Ralph Loop → Scrum-Masters
 
 1. **Planning Skill** (`.claude/skills/beads-ralph-planner/SKILL.md`)
    - Works with user to refine plan
-   - Delegates to beads-architect agent to create beads
+   - Delegates to beads-mason agent to create beads
    - Validates schema before execution
 
-2. **Beads Architect** (`.claude/agents/beads-architect.md`)
+2. **Beads Architect** (`.claude/agents/beads-mason.md`)
    - Converts finalized plan into beads with extended schema
    - Creates merge beads for integration sprints
    - Sets up dependency chains for sprint sequencing
@@ -79,7 +79,7 @@ beads-ralph/
 ├── .claude/
 │   ├── agents/
 │   │   ├── beads-ralph-scrum-master.md
-│   │   ├── beads-architect.md
+│   │   ├── beads-mason.md
 │   │   └── plan-review.md
 │   └── skills/
 │       └── beads-ralph-planner/
