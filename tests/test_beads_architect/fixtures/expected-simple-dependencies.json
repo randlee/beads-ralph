@@ -1,0 +1,17 @@
+{
+  "bd-1-1-setup": {
+    "dependencies": [],
+    "sprint": "1.1",
+    "title": "Initial Setup"
+  },
+  "bd-1-2-core": {
+    "dependencies": ["bd-1-1-setup"],
+    "sprint": "1.2",
+    "title": "Core Implementation"
+  },
+  "bd-1-3-integration": {
+    "dependencies": ["bd-1-2-core"],
+    "sprint": "1.3",
+    "title": "Final Integration"
+  }
+}
