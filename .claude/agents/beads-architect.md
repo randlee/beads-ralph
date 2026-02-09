@@ -198,6 +198,365 @@ Status values:
 - Code: `DEPENDENCY.UNRESOLVED`
 - Suggested action: "Verify referenced sprint IDs exist in plan; check dependency chain"
 
+## Plan Back-Annotation (Bi-directional Tracking)
+
+After beads are successfully generated and validated, the plan file can be back-annotated with bead IDs to enable bi-directional navigation between plans and beads. This creates an audit trail and allows both human reviewers and automated tools to track work from plan to execution and back.
+
+### Annotation Format
+
+Back-annotations use HTML comment syntax to remain invisible in rendered markdown while being easily parseable:
+
+```markdown
+### Sprint 1.2: User Authentication
+<!-- beads-ralph: bd-1-2-user-auth -->
+
+**Worktree**: `../beads-ralph-worktrees/feature/1-2-user-auth`
+**Branch**: `feature/1-2-user-auth`
+```
+
+**Format Rules**:
+- HTML comment inserted immediately after sprint heading line
+- Format: `<!-- beads-ralph: <bead-id> -->`
+- Must include exactly one space after `<!--` and before `-->`
+- Bead ID must match the generated bead's `id` field
+- One annotation per sprint (no duplicate annotations)
+
+### Sprint Heading Detection
+
+Use this regex pattern to find sprint headings in plan files:
+
+```python
+import re
+
+SPRINT_HEADING_PATTERN = r'^### Sprint (\d+)\.(\d+)([a-c])?:\s*(.+)$'
+
+def find_sprint_headings(plan_content: str) -> list[tuple[int, str, str]]:
+    """
+    Find all sprint headings in plan file.
+
+    Returns:
+        List of (line_number, sprint_id, heading_text) tuples
+    """
+    headings = []
+    lines = plan_content.splitlines()
+
+    for line_num, line in enumerate(lines, start=1):
+        match = re.match(SPRINT_HEADING_PATTERN, line)
+        if match:
+            phase = match.group(1)
+            sprint_num = match.group(2)
+            suffix = match.group(3) or ""  # a, b, c, or empty
+            title = match.group(4)
+
+            sprint_id = f"{phase}.{sprint_num}{suffix}"
+            headings.append((line_num, sprint_id, line))
+
+    return headings
+```
+
+**Pattern Components**:
+- `^### Sprint` - Matches level-3 heading starting with "Sprint"
+- `(\d+)\.(\d+)` - Captures phase and sprint numbers (e.g., "1.2")
+- `([a-c])?` - Optional parallel sprint suffix (a, b, or c)
+- `:\s*(.+)$` - Colon separator and sprint title
+
+**Examples of Valid Headings**:
+- `### Sprint 1.1: Core Schema Validation Script`
+- `### Sprint 2.3a: Parallel Work Bead Execution`
+- `### Sprint 5.2: Final Integration & Testing`
+
+### Sprint ID to Bead ID Mapping
+
+The beads-architect agent creates bead IDs from sprint IDs using this pattern:
+
+```python
+def sprint_id_to_bead_id(sprint_id: str, sprint_title: str) -> str:
+    """
+    Convert sprint ID and title to bead ID.
+
+    Args:
+        sprint_id: e.g., "1.2", "3.1a", "2.4b"
+        sprint_title: e.g., "User Authentication"
+
+    Returns:
+        Bead ID like "bd-1-2-user-auth"
+    """
+    # Remove any dots from sprint ID (1.2a → 1-2a)
+    parts = sprint_id.replace('.', '-')
+
+    # Normalize title: lowercase, replace spaces/special chars with hyphens
+    title_slug = re.sub(r'[^a-z0-9]+', '-', sprint_title.lower())
+    title_slug = title_slug.strip('-')  # Remove leading/trailing hyphens
+
+    return f"bd-{parts}-{title_slug}"
+```
+
+**Mapping Examples**:
+- Sprint `1.1: Core Schema Validation Script` → `bd-1-1-schema`
+- Sprint `1.2a: Example Work Bead` → `bd-1-2a-work`
+- Sprint `3.4b: QA Agent Validation` → `bd-3-4b-qa-validation`
+
+**Consistency Rule**: The bead ID in the annotation MUST match the actual `id` field in the generated bead JSON file.
+
+### Annotation Algorithm
+
+Implement back-annotation with this algorithm:
+
+```python
+def annotate_plan_with_bead_ids(
+    plan_file_path: str,
+    sprint_to_bead_mapping: dict[str, str]
+) -> tuple[bool, str]:
+    """
+    Back-annotate plan file with bead IDs.
+
+    Args:
+        plan_file_path: Absolute path to plan markdown file
+        sprint_to_bead_mapping: Dict mapping sprint ID → bead ID
+                                e.g., {"1.1": "bd-1-1-schema", "1.2a": "bd-1-2a-work"}
+
+    Returns:
+        (success, message) tuple
+    """
+    try:
+        with open(plan_file_path, 'r', encoding='utf-8') as f:
+            lines = f.readlines()
+    except FileNotFoundError:
+        return False, f"Plan file not found: {plan_file_path}"
+
+    updated_lines = []
+    annotations_added = 0
+
+    for i, line in enumerate(lines):
+        updated_lines.append(line)
+
+        # Check if this line is a sprint heading
+        match = re.match(SPRINT_HEADING_PATTERN, line)
+        if match:
+            phase = match.group(1)
+            sprint_num = match.group(2)
+            suffix = match.group(3) or ""
+            sprint_id = f"{phase}.{sprint_num}{suffix}"
+
+            # Check if we have a bead ID for this sprint
+            if sprint_id in sprint_to_bead_mapping:
+                bead_id = sprint_to_bead_mapping[sprint_id]
+
+                # Check if next line is already an annotation (avoid duplicates)
+                if i + 1 < len(lines) and 'beads-ralph:' in lines[i + 1]:
+                    continue  # Skip, already annotated
+
+                # Add annotation comment
+                annotation = f'<!-- beads-ralph: {bead_id} -->\n'
+                updated_lines.append(annotation)
+                annotations_added += 1
+
+    # Write updated plan back to file
+    try:
+        with open(plan_file_path, 'w', encoding='utf-8') as f:
+            f.writelines(updated_lines)
+        return True, f"Added {annotations_added} bead ID annotations"
+    except IOError as e:
+        return False, f"Failed to write plan file: {str(e)}"
+```
+
+**Algorithm Steps**:
+1. Read plan file line-by-line
+2. Detect sprint headings using regex pattern
+3. Extract sprint ID from heading
+4. Look up bead ID in mapping dictionary
+5. Check if annotation already exists (skip duplicates)
+6. Insert annotation comment on next line
+7. Write updated content back to plan file
+
+### Use Cases for Bi-directional Navigation
+
+**Use Case 1: Plan → Bead (Find Work Item from Plan)**
+
+```bash
+# Find bead ID for sprint 1.2 from plan file
+grep -A 1 "### Sprint 1.2:" pm/2026-02-08-implementation-plan.md | grep "beads-ralph:"
+# Output: <!-- beads-ralph: bd-1-2-user-auth -->
+
+# Show full bead details
+cat beads/bd-1-2-user-auth.json | jq .
+
+# Check bead status
+jq '.status' beads/bd-1-2-user-auth.json
+# Output: "in_progress"
+```
+
+**Use Case 2: Bead → Plan (Find Plan Section from Work Item)**
+
+```bash
+# Extract plan file and section from bead metadata
+jq -r '.metadata.plan_file, .metadata.plan_section' beads/bd-1-2-user-auth.json
+# Output:
+# pm/2026-02-08-implementation-plan.md
+# ### Sprint 1.2: User Authentication
+
+# Open plan file at specific section (for manual review)
+code pm/2026-02-08-implementation-plan.md  # Search for "Sprint 1.2"
+```
+
+**Use Case 3: Audit Trail (Track Execution Status)**
+
+```bash
+# For each sprint in plan, show bead status
+grep -E "^### Sprint" pm/2026-02-08-implementation-plan.md | while read heading; do
+  sprint_id=$(echo "$heading" | grep -oE '[0-9]+\.[0-9]+[a-c]?')
+  bead_id=$(grep -A 1 "Sprint $sprint_id:" pm/2026-02-08-implementation-plan.md | grep "beads-ralph:" | grep -oE 'bd-[a-z0-9-]+')
+  status=$(jq -r '.status' "beads/$bead_id.json" 2>/dev/null || echo "not_found")
+  echo "$sprint_id | $bead_id | $status"
+done
+
+# Output:
+# 1.1 | bd-1-1-schema | closed
+# 1.2a | bd-1-2a-work | in_progress
+# 1.2b | bd-1-2b-merge | open
+```
+
+**Use Case 4: PR Link Resolution**
+
+```bash
+# Find PR URL from plan section
+sprint_id="1.2a"
+bead_id=$(grep -A 1 "Sprint $sprint_id:" pm/2026-02-08-implementation-plan.md | grep "beads-ralph:" | grep -oE 'bd-[a-z0-9-]+')
+pr_url=$(jq -r '.metadata.pr_url // "not_created"' "beads/$bead_id.json")
+echo "Sprint $sprint_id PR: $pr_url"
+# Output: Sprint 1.2a PR: https://github.com/user/repo/pull/8
+```
+
+### Error Handling
+
+**Missing Sprint in Mapping**:
+```python
+# Scenario: Sprint exists in plan but no bead was generated
+# Action: Skip annotation for that sprint, log warning
+if sprint_id not in sprint_to_bead_mapping:
+    logger.warning(f"No bead ID found for sprint {sprint_id}, skipping annotation")
+    continue
+```
+
+**Duplicate Annotations**:
+```python
+# Scenario: Sprint already has annotation from previous run
+# Action: Detect existing annotation, skip adding duplicate
+if i + 1 < len(lines) and 'beads-ralph:' in lines[i + 1]:
+    logger.info(f"Sprint {sprint_id} already annotated, skipping")
+    continue
+```
+
+**Invalid Bead ID Format**:
+```python
+# Scenario: Bead ID doesn't match expected pattern
+# Action: Validate before annotation
+if not re.match(r'^bd-[0-9a-z-]+$', bead_id):
+    logger.error(f"Invalid bead ID format: {bead_id}, skipping annotation")
+    continue
+```
+
+**File Write Failure**:
+```python
+# Scenario: Plan file is read-only or disk full
+# Action: Catch IOError, return failure status
+try:
+    with open(plan_file_path, 'w', encoding='utf-8') as f:
+        f.writelines(updated_lines)
+except IOError as e:
+    return False, f"Failed to write plan file: {str(e)}"
+```
+
+**Malformed Sprint Headings**:
+```python
+# Scenario: Sprint heading doesn't match expected format
+# Action: Log warning, skip that line
+if not re.match(SPRINT_HEADING_PATTERN, line):
+    if '### Sprint' in line:
+        logger.warning(f"Malformed sprint heading at line {i}: {line.strip()}")
+    continue
+```
+
+### Integration with Beads Workflow
+
+**When to Annotate**:
+1. **After Bead Generation**: Once all beads for a plan are successfully generated and validated
+2. **Before Bead Execution**: Annotations help track which sprints have been converted to beads
+3. **After Manual Plan Updates**: Re-run annotation when plan is modified to sync bead IDs
+
+**When NOT to Annotate**:
+- During bead generation (wait until all beads are validated)
+- If any bead validation fails (partial annotations create confusion)
+- On read-only plan files (e.g., archived plans, version control conflicts)
+
+**Annotation Workflow**:
+```python
+# Typical workflow in beads-architect agent
+def process_plan_and_annotate(plan_file_path: str, sprint_filter: str = None):
+    # Step 1: Generate beads from plan
+    beads = generate_beads_from_plan(plan_file_path, sprint_filter)
+
+    # Step 2: Validate all beads
+    validation_results = validate_all_beads(beads)
+    if not all(result.success for result in validation_results):
+        return {"success": False, "error": "Bead validation failed"}
+
+    # Step 3: Write bead JSON files
+    for bead in beads:
+        write_bead_json(bead)
+
+    # Step 4: Build sprint → bead ID mapping
+    sprint_to_bead = {bead['metadata']['plan_sprint_id']: bead['id'] for bead in beads}
+
+    # Step 5: Back-annotate plan file
+    success, message = annotate_plan_with_bead_ids(plan_file_path, sprint_to_bead)
+
+    return {"success": success, "beads_created": len(beads), "annotation_message": message}
+```
+
+### Preserving Plan Readability
+
+**Design Principles**:
+- Annotations use HTML comments (invisible in rendered markdown)
+- Inserted immediately after heading (logical association)
+- One line per annotation (consistent, easy to parse)
+- No changes to existing content (preserves git diffs)
+
+**Before Annotation**:
+```markdown
+### Sprint 1.2: User Authentication
+
+**Worktree**: `../beads-ralph-worktrees/feature/1-2-user-auth`
+**Branch**: `feature/1-2-user-auth`
+**Source Branch**: `develop`
+```
+
+**After Annotation**:
+```markdown
+### Sprint 1.2: User Authentication
+<!-- beads-ralph: bd-1-2-user-auth -->
+
+**Worktree**: `../beads-ralph-worktrees/feature/1-2-user-auth`
+**Branch**: `feature/1-2-user-auth`
+**Source Branch**: `develop`
+```
+
+**Rendering Comparison**:
+- **GitHub/GitLab**: HTML comments are completely hidden
+- **VS Code Preview**: Comments not displayed
+- **Plain Text Editors**: Comments visible but clearly marked as metadata
+- **grep/sed**: Easy to filter with `grep "beads-ralph:"` or skip with `grep -v "<!--"`
+
+**Git Diff Impact**:
+```diff
+ ### Sprint 1.2: User Authentication
++<!-- beads-ralph: bd-1-2-user-auth -->
+
+ **Worktree**: `../beads-ralph-worktrees/feature/1-2-user-auth`
+```
+
+Annotations add minimal diff noise and clearly show audit trail additions.
+
 ## Examples
 
 ### Example 1: Simple Sequential Sprint
