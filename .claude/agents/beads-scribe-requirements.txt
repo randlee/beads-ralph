@@ -1,0 +1,558 @@
+# Beads Scribe Agent - Requirements Specification
+
+## Overview
+
+The beads-scribe agent maintains synchronization between the beads database (source of truth) and external record-keeping systems (audit trail). It acts as the authoritative record-keeper, ensuring all bead lifecycle events are properly documented.
+
+**Core Principle**: Double-ledger system - database for execution, external records for audit/visibility.
+
+---
+
+## Core Requirements (MVP)
+
+### 1. Plan Annotation on Bead Creation
+
+**Input**:
+- `plan_file_path` (string, required): Absolute path to implementation plan
+- `sprint_id` (string, required): Sprint identifier (e.g., "1.2a", "3.1")
+- `bead_id` (string, required): Database bead ID (e.g., "bd-1-2-user-auth")
+- `action` (string, required): "annotate" for creation annotation
+
+**Behavior**:
+- Locate sprint heading using regex: `^### Sprint (\d+[a-z]*)\.(\d+[a-z]*): (.+)$`
+- Insert HTML comment immediately after heading: `<!-- beads-ralph: {bead_id} -->`
+- Handle existing annotations gracefully (skip if already present)
+- Preserve markdown formatting and indentation
+- Atomic file write (read → modify → write with backup)
+
+**Output**:
+```json
+{
+  "success": true,
+  "data": {
+    "action": "annotate",
+    "bead_id": "bd-1-2-user-auth",
+    "sprint_id": "1.2",
+    "plan_file": "pm/implementation-plan.md",
+    "line_number": 142,
+    "annotation": "<!-- beads-ralph: bd-1-2-user-auth -->"
+  },
+  "error": null
+}
+```
+
+### 2. Plan Completion Marking on Bead Closure
+
+**Input**:
+- `plan_file_path` (string, required): Absolute path to implementation plan
+- `bead_id` (string, required): Database bead ID
+- `action` (string, required): "complete" for completion marking
+- `metadata` (object, optional): Completion details (PR number, date, commit hash)
+
+**Behavior**:
+- Locate sprint by bead ID annotation (`<!-- beads-ralph: bd-1-2-user-auth -->`)
+- Update sprint heading with checkmark: `### Sprint 1.2: User Authentication ✅`
+- Add completion metadata line after annotation:
+  ```markdown
+  <!-- beads-ralph: bd-1-2-user-auth -->
+  **Status**: ✅ Completed (PR #42, 2026-02-09, commit: abc123)
+  ```
+- Update sprint status line if present: `**Status**: ✅ **COMPLETED**`
+- Handle partial completion (some tasks done, not all) - use ⚠️ icon
+- Preserve all other content unchanged
+
+**Output**:
+```json
+{
+  "success": true,
+  "data": {
+    "action": "complete",
+    "bead_id": "bd-1-2-user-auth",
+    "sprint_id": "1.2",
+    "plan_file": "pm/implementation-plan.md",
+    "completion_marker": "✅",
+    "metadata": {
+      "pr_number": 42,
+      "completed_date": "2026-02-09",
+      "commit_hash": "abc123"
+    }
+  },
+  "error": null
+}
+```
+
+### 3. Concurrent Edit Handling
+
+**Requirements**:
+- Detect file modifications between read and write
+- Use file modification time (mtime) or content hash check
+- Retry logic with exponential backoff (3 attempts)
+- Fail gracefully with clear error message on conflicts
+- Never overwrite unrelated changes
+
+**Conflict Resolution**:
+- If plan modified during operation → error `PLAN.CONCURRENT_EDIT`
+- Return current file state and attempted changes
+- Let caller decide whether to retry
+
+### 4. Validation
+
+**Pre-execution checks**:
+- Plan file exists and is readable/writable
+- Sprint heading exists for given sprint_id
+- For "complete" action: bead annotation must already exist
+- For "annotate" action: no duplicate annotation present
+
+**Error Codes**:
+- `PLAN.NOT_FOUND` - Plan file doesn't exist
+- `PLAN.NOT_WRITABLE` - No write permissions
+- `PLAN.SPRINT_NOT_FOUND` - Sprint heading not in plan
+- `PLAN.BEAD_NOT_ANNOTATED` - Cannot mark complete without annotation
+- `PLAN.ALREADY_ANNOTATED` - Bead ID already present (for annotate action)
+- `PLAN.CONCURRENT_EDIT` - File modified during operation
+- `PLAN.INVALID_FORMAT` - Plan structure doesn't match expected format
+
+---
+
+## Advanced Requirements (Future/Extensible)
+
+### 5. GitHub Issues Integration
+
+**Purpose**: Sync bead lifecycle events to GitHub Issues for team visibility.
+
+**Configuration**:
+```yaml
+# .beads/config.yaml
+record_keepers:
+  github_issues:
+    enabled: true
+    repo: "randlee/beads-ralph"
+    label_prefix: "sprint"
+    create_on_bead: true      # Create issue when bead created
+    close_on_complete: true   # Close issue when bead completed
+    comment_on_progress: true # Comment on major status changes
+```
+
+**Behavior**:
+- **On bead creation**: Create GitHub issue with sprint details
+  - Title: Sprint ID + sprint title
+  - Body: Sprint description, tasks, acceptance criteria
+  - Labels: sprint number, phase, priority
+  - Link to bead ID in issue body
+
+- **On bead completion**: Close GitHub issue
+  - Add closing comment with PR reference, completion date
+  - Link to merged PR if available
+
+- **On bead status change**: Comment on issue
+  - Status transitions (hooked, in_progress, blocked, completed)
+  - QA results, retry attempts, failure reasons
+
+**Authentication**:
+- Use `GITHUB_TOKEN` environment variable
+- Fall back to `gh` CLI authentication
+- Support GitHub App tokens for enterprise
+
+**API Calls**:
+- `POST /repos/{owner}/{repo}/issues` - Create issue
+- `PATCH /repos/{owner}/{repo}/issues/{issue_number}` - Update/close
+- `POST /repos/{owner}/{repo}/issues/{issue_number}/comments` - Add comments
+- Rate limit handling (5000 requests/hour)
+
+### 6. Azure DevOps Work Items Integration
+
+**Purpose**: Sync beads to Azure Boards for enterprise project management.
+
+**Configuration**:
+```yaml
+record_keepers:
+  azure_devops:
+    enabled: true
+    organization: "myorg"
+    project: "beads-ralph"
+    work_item_type: "Task"  # Task, Bug, User Story, etc.
+    area_path: "beads-ralph\\Sprints"
+    iteration_path: "beads-ralph\\Sprint {sprint_id}"
+```
+
+**Behavior**:
+- **On bead creation**: Create work item
+  - Type: Configurable (Task, Bug, User Story)
+  - Title: Sprint ID + title
+  - Description: Sprint details with bead ID reference
+  - Tags: phase, sprint, priority
+  - Area/Iteration paths from config
+
+- **On bead completion**: Update work item state
+  - State: "Closed" or "Done" (based on process template)
+  - Add completion comment with PR/commit references
+  - Update completion date field
+
+- **On status changes**: Add comments
+  - Track major lifecycle events
+  - Link related PRs and commits
+
+**Authentication**:
+- Use `AZURE_DEVOPS_PAT` environment variable (Personal Access Token)
+- Support managed identity for Azure-hosted runners
+- OAuth for interactive flows
+
+**API Calls**:
+- `POST https://dev.azure.com/{org}/{project}/_apis/wit/workitems/${type}` - Create
+- `PATCH https://dev.azure.com/{org}/{project}/_apis/wit/workitems/{id}` - Update
+- Rate limit: 200 requests per user per minute
+
+### 7. Jira Integration
+
+**Purpose**: Sync beads to Jira for Atlassian-based teams.
+
+**Configuration**:
+```yaml
+record_keepers:
+  jira:
+    enabled: true
+    base_url: "https://mycompany.atlassian.net"
+    project_key: "BR"  # Beads-Ralph
+    issue_type: "Task"
+    component: "sprints"
+    epic_link_field: "customfield_10014"  # Link to phase epic
+```
+
+**Behavior**:
+- **On bead creation**: Create Jira issue
+  - Project: From config
+  - Issue Type: Task, Story, Bug, etc.
+  - Summary: Sprint ID + title
+  - Description: Sprint details (Jira markdown format)
+  - Labels: sprint, phase, priority
+  - Link to epic if phase mapping configured
+
+- **On bead completion**: Transition issue
+  - Transition to "Done" status (workflow-aware)
+  - Add comment with completion details
+  - Link to GitHub PR if available
+
+- **On status changes**: Update issue
+  - Status field updates
+  - Comments for lifecycle events
+  - Custom field updates (progress, blockers)
+
+**Authentication**:
+- Use `JIRA_API_TOKEN` environment variable
+- Support email + API token (Atlassian Cloud)
+- Support PAT (Jira Data Center/Server)
+
+**API Calls**:
+- `POST /rest/api/3/issue` - Create issue
+- `POST /rest/api/3/issue/{issueIdOrKey}/transitions` - Transition
+- `POST /rest/api/3/issue/{issueIdOrKey}/comment` - Add comment
+- `PUT /rest/api/3/issue/{issueIdOrKey}` - Update fields
+- Rate limit: Varies by plan (typically 10-100 req/sec)
+
+### 8. Generic Webhook Support
+
+**Purpose**: Allow custom integrations via webhooks.
+
+**Configuration**:
+```yaml
+record_keepers:
+  webhooks:
+    - name: "slack-notifications"
+      url: "https://hooks.slack.com/services/XXX"
+      events: ["bead.created", "bead.completed", "bead.failed"]
+      headers:
+        Authorization: "Bearer ${SLACK_TOKEN}"
+      template: "slack-message"
+
+    - name: "custom-tracker"
+      url: "https://mycompany.com/api/beads/webhook"
+      events: ["*"]  # All events
+      auth_type: "bearer"
+      secret_env: "CUSTOM_TRACKER_TOKEN"
+```
+
+**Supported Events**:
+- `bead.created` - New bead inserted
+- `bead.updated` - Bead metadata changed
+- `bead.status_changed` - Status transition
+- `bead.completed` - Bead marked closed
+- `bead.failed` - QA failed or fatal error
+- `bead.retried` - Dev-QA retry initiated
+
+**Payload Format**:
+```json
+{
+  "event": "bead.completed",
+  "timestamp": "2026-02-09T12:34:56Z",
+  "bead": {
+    "id": "bd-1-2-user-auth",
+    "title": "User Authentication",
+    "sprint_id": "1.2",
+    "phase": "1",
+    "status": "closed",
+    "pr_url": "https://github.com/randlee/beads-ralph/pull/42",
+    "completed_at": "2026-02-09T12:30:00Z"
+  },
+  "metadata": {
+    "pr_number": 42,
+    "commit_hash": "abc123",
+    "source": "beads-scribe"
+  }
+}
+```
+
+**Retry Logic**:
+- 3 retry attempts with exponential backoff
+- Timeouts after 10 seconds per request
+- Log failures but don't block main operations
+
+### 9. Plugin Architecture
+
+**Purpose**: Extensible record-keeper system for custom integrations.
+
+**Interface**:
+```python
+# Python plugin example
+class RecordKeeperPlugin:
+    def on_bead_created(self, bead: Bead, context: Context) -> Result:
+        """Called when bead is created"""
+        pass
+
+    def on_bead_completed(self, bead: Bead, metadata: dict) -> Result:
+        """Called when bead is completed"""
+        pass
+
+    def on_bead_status_changed(self, bead: Bead, old_status: str, new_status: str) -> Result:
+        """Called on any status transition"""
+        pass
+```
+
+**Plugin Discovery**:
+- Plugins located in `.beads/plugins/record-keepers/`
+- Config specifies enabled plugins
+- Load order: built-in → custom plugins
+- Error in one plugin doesn't affect others (isolation)
+
+**Plugin Configuration**:
+```yaml
+record_keepers:
+  custom_plugins:
+    - name: "company-tracker"
+      path: ".beads/plugins/record-keepers/company_tracker.py"
+      enabled: true
+      config:
+        api_url: "https://internal.company.com/api"
+        team_id: "beads-team"
+```
+
+---
+
+## Implementation Strategy
+
+### Phase 1: Core MVP (Sprint 3.x)
+- Plan annotation on creation
+- Plan completion marking on closure
+- Concurrent edit handling
+- Error codes and validation
+
+### Phase 2: GitHub Integration (Sprint 4.x)
+- GitHub Issues sync
+- Issue creation/closure
+- Status comments
+
+### Phase 3: Enterprise Integrations (Sprint 5.x)
+- Azure DevOps work items
+- Jira issues
+- Configuration system for multiple backends
+
+### Phase 4: Extensibility (Sprint 6.x)
+- Generic webhook support
+- Plugin architecture
+- Custom record-keeper plugins
+
+---
+
+## Configuration Schema
+
+```yaml
+# .beads/config.yaml (top-level)
+scribe:
+  # Core settings
+  plan_file: "pm/2026-02-08-implementation-plan.md"
+  backup_on_write: true
+  retry_attempts: 3
+  retry_backoff_ms: [100, 500, 2000]
+
+  # Record keeper backends
+  record_keepers:
+    # Plan file (always enabled)
+    plan:
+      enabled: true
+
+    # GitHub Issues
+    github_issues:
+      enabled: false
+      repo: "randlee/beads-ralph"
+      label_prefix: "sprint"
+
+    # Azure DevOps
+    azure_devops:
+      enabled: false
+      organization: "myorg"
+      project: "beads-ralph"
+
+    # Jira
+    jira:
+      enabled: false
+      base_url: "https://mycompany.atlassian.net"
+      project_key: "BR"
+
+    # Webhooks
+    webhooks:
+      enabled: false
+      endpoints: []
+
+    # Custom plugins
+    plugins:
+      enabled: false
+      plugin_dir: ".beads/plugins/record-keepers"
+```
+
+---
+
+## Error Handling & Resilience
+
+### Failure Modes
+
+1. **Plan file errors**: Non-fatal, log and continue (external systems still updated)
+2. **External system errors**: Non-fatal, log and retry, don't block database operations
+3. **Concurrent edits**: Fatal for plan operations, return error to caller
+4. **Network failures**: Retry with backoff, eventual consistency acceptable
+
+### Idempotency
+
+All operations must be idempotent:
+- Annotate: Skip if annotation already exists
+- Complete: Update if already marked (e.g., metadata change)
+- External systems: Check if issue/work item exists before creating
+
+### Observability
+
+**Logging**:
+- All record-keeper operations logged with bead ID
+- External API calls logged (URL, status, duration)
+- Failures logged with full context for debugging
+
+**Metrics** (future):
+- Record-keeper latency per backend
+- Success/failure rates per backend
+- Retry counts and backoff durations
+
+---
+
+## Testing Requirements
+
+### Unit Tests
+- Plan annotation insertion (various sprint formats)
+- Completion marking (with/without metadata)
+- Concurrent edit detection (simulate mtime changes)
+- Error code coverage (all error paths)
+
+### Integration Tests
+- End-to-end: create bead → annotate plan → complete bead → update plan
+- GitHub API mocking (create issue, close issue)
+- Azure DevOps API mocking
+- Jira API mocking
+- Webhook payload verification
+
+### Performance Tests
+- Large plan files (1000+ sprints)
+- Concurrent scribe operations (10+ parallel)
+- External API rate limit handling
+
+---
+
+## Security Considerations
+
+### Credentials Management
+- Never log API tokens or secrets
+- Use environment variables for sensitive config
+- Support credential rotation without code changes
+- Validate token scopes (read-only vs write)
+
+### Input Validation
+- Sanitize all user inputs (bead IDs, metadata)
+- Validate plan file paths (no directory traversal)
+- Validate URLs for webhooks (no SSRF)
+
+### Audit Trail
+- Log all external system modifications
+- Include actor (agent/user) in all operations
+- Timestamp all events for forensics
+
+---
+
+## Dependencies
+
+### Core
+- Python 3.9+ (for agent implementation)
+- pydantic >=2.0 (validation)
+- PyYAML >=6.0 (config parsing)
+
+### External Integrations
+- requests >=2.31 (HTTP client)
+- PyGithub >=2.1 (GitHub API, optional)
+- azure-devops >=7.1 (Azure DevOps API, optional)
+- jira >=3.5 (Jira API, optional)
+
+### Testing
+- pytest >=7.4
+- pytest-mock >=3.12
+- responses >=0.24 (HTTP mocking)
+
+---
+
+## Success Criteria
+
+### MVP Success
+- ✅ Annotate plan on bead creation (100% success rate)
+- ✅ Mark plan complete on bead closure (100% success rate)
+- ✅ Handle concurrent edits gracefully (detect and error)
+- ✅ Comprehensive error handling and codes
+- ✅ >95% test coverage
+
+### Advanced Success
+- ✅ GitHub Issues integration working end-to-end
+- ✅ Azure DevOps integration working end-to-end
+- ✅ Jira integration working end-to-end
+- ✅ Webhook support with retry logic
+- ✅ Plugin architecture with example plugin
+- ✅ <500ms average latency for plan operations
+- ✅ <2s average latency for external system operations
+- ✅ 99.9% success rate for non-network operations
+
+---
+
+## Open Questions
+
+1. **Merge conflicts**: How to handle plan updates when plan is being edited by humans?
+   - Proposal: Scribe fails fast, returns conflict, human resolves
+
+2. **Sprint renumbering**: What happens if sprint IDs change in plan?
+   - Proposal: Bead ID annotations are canonical, sprint ID is metadata
+
+3. **Bulk operations**: Should scribe support batch annotation (multiple beads at once)?
+   - Proposal: Yes, for performance when processing entire plans
+
+4. **Rollback**: If external system fails after plan update, should we rollback plan?
+   - Proposal: No, plan update is authoritative, external systems are eventual consistency
+
+5. **Multiple plans**: Can one bead span multiple plan files?
+   - Proposal: No, beads belong to single plan file (1:1 mapping)
+
+---
+
+**Version**: 1.0.0
+**Last Updated**: 2026-02-09
+**Owner**: ARCH-RALPH
+**Status**: Requirements Draft - Ready for Agent Implementation

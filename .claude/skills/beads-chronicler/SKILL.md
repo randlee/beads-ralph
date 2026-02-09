@@ -1,11 +1,16 @@
 ---
-name: beads-convoy
-description: Create bead convoys from implementation plans by orchestrating beads-mason (direct beads) and beads-smelter (formula pours).
+name: beads-chronicler
+description: Chronicle implementation plans into beads database by orchestrating beads-mason (direct beads), beads-smelter (formula pours), and beads-scribe (plan annotation).
 ---
 
-# Beads Convoy Skill
+# Beads Chronicler Skill
 
-Use this skill when the user wants to convert a plan into executable beads in the database, or to build a convoy from a plan.
+## See Also
+
+- [Agent Architecture Documentation](../../../docs/agent-architecture.md) - Agent and skill design patterns
+
+
+Use this skill when the user wants to chronicle a plan into the beads database - converting plan sections into beads, creating tracking containers (convoys), and annotating the plan with bead IDs.
 
 ## Delegation Overview
 
@@ -39,5 +44,8 @@ Return a minimal response envelope. Include:
 
 ## Notes
 
-- This skill does not design formulas. Use `beads-alchemy` for that.
+- This skill chronicles plans by creating beads and tracking structures.
+- It does not design formulas - use `beads-alchemy` for formula design.
+- It delegates to `beads-scribe` for plan annotation (recording bead IDs).
 - Prefer explicit formula signals to avoid accidental macro usage.
+- Creates convoy tracking containers (gastown-style) for work coordination.

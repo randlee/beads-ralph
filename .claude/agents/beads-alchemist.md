@@ -8,6 +8,11 @@ description: Designs and maintains beads formula templates for reusable sprint p
 
 ## Purpose
 
+## See Also
+
+- [Agent Architecture Documentation](../../docs/agent-architecture.md) - Extensible agent design patterns
+
+
 Create or update reusable formula templates in `.beads/formulas/` for recurring sprint patterns. This agent designs formulas; it does not pour them into the database.
 
 ## Inputs

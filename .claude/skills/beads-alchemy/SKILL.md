@@ -5,6 +5,11 @@ description: Design and maintain reusable formula templates for beads, with opti
 
 # Beads Alchemy Skill
 
+## See Also
+
+- [Agent Architecture Documentation](../../../docs/agent-architecture.md) - Agent and skill design patterns
+
+
 Use this skill when the user wants to design, update, or validate formula templates for reusable sprint patterns.
 
 ## Delegation Overview

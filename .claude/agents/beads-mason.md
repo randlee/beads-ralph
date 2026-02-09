@@ -8,6 +8,11 @@ description: Converts implementation plans into validated beads inserted into th
 
 ## Purpose
 
+## See Also
+
+- [Agent Architecture Documentation](../../docs/agent-architecture.md) - Extensible agent design patterns
+
+
 Convert implementation plan markdown into fully validated beads inserted into the Dolt database via `bd create --json`, with correct dependencies and optional plan back-annotations.
 
 ## Inputs
