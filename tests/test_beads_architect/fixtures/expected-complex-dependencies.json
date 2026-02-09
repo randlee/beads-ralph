@@ -1,0 +1,38 @@
+{
+  "bd-1-1-framework": {
+    "dependencies": [],
+    "sprint": "1.1",
+    "phase": "1"
+  },
+  "bd-2-1-database": {
+    "dependencies": ["bd-1-1-framework"],
+    "sprint": "2.1",
+    "phase": "2"
+  },
+  "bd-3a-1-ui-components": {
+    "dependencies": ["bd-2-1-database"],
+    "sprint": "3a.1",
+    "phase": "3a"
+  },
+  "bd-3a-2-user-interface": {
+    "dependencies": ["bd-3a-1-ui-components"],
+    "sprint": "3a.2",
+    "phase": "3a"
+  },
+  "bd-3b-1-api-layer": {
+    "dependencies": ["bd-2-1-database"],
+    "sprint": "3b.1",
+    "phase": "3b"
+  },
+  "bd-3b-2-business-logic": {
+    "dependencies": ["bd-3b-1-api-layer"],
+    "sprint": "3b.2",
+    "phase": "3b"
+  },
+  "bd-4-1-integration": {
+    "dependencies": ["bd-3a-2-user-interface", "bd-3b-2-business-logic"],
+    "sprint": "4.1",
+    "phase": "4",
+    "note": "Converges both 3a and 3b tracks"
+  }
+}

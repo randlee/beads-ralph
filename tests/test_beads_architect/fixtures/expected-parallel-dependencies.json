@@ -1,0 +1,22 @@
+{
+  "bd-1-1-foundation": {
+    "dependencies": [],
+    "sprint": "1.1",
+    "title": "Foundation"
+  },
+  "bd-1-2a-frontend": {
+    "dependencies": ["bd-1-1-foundation"],
+    "sprint": "1.2a",
+    "title": "Frontend Development"
+  },
+  "bd-1-2b-backend": {
+    "dependencies": ["bd-1-1-foundation"],
+    "sprint": "1.2b",
+    "title": "Backend API"
+  },
+  "bd-1-3-integration": {
+    "dependencies": ["bd-1-2a-frontend", "bd-1-2b-backend"],
+    "sprint": "1.3",
+    "title": "Integration & Testing"
+  }
+}
