@@ -1,0 +1,1286 @@
+# Beads-Mason Agent Requirements
+
+**Version**: 2.0.0
+**Status**: Draft
+**Last Updated**: 2026-02-08
+
+---
+
+## Overview
+
+The beads-mason agent is responsible for converting implementation plan markdown into executable beads and formulas in the Dolt database. It serves as the bridge between human-readable planning documents and the beads execution system.
+
+**Primary Responsibility**: Convert implementation plans to beads (direct insertion)
+**Secondary Responsibility**: Identify formula opportunities and delegate to beads-alchemist (design) and beads-smelter (pour) via the convoy skill
+
+---
+
+## Core Responsibilities
+
+### 1. Plan-to-Beads Conversion (PRIMARY)
+
+Convert markdown implementation plans into individual beads stored in the Dolt database via bd CLI.
+
+**Input**: Implementation plan markdown file with sprint sections
+**Output**: Beads inserted into database with complete metadata and dependencies
+**Method**: Direct `bd create --json` insertion for each sprint
+
+### 2. Formula Generation and Pouring (SECONDARY)
+
+Generate reusable formula templates from sprint patterns and pour them to create bead hierarchies.
+
+**Input**: Sprint patterns, formula templates, variables
+**Output**: Formulas stored in `.beads/formulas/`, poured molecules in database
+**Method**: Create formula JSON/TOML, use `bd mol pour` with variables
+
+---
+
+## Functional Requirements
+
+### FR-1: Parse Implementation Plan Markdown
+
+**Description**: Extract sprint sections, metadata, tasks, and acceptance criteria from plan markdown.
+
+**Inputs**:
+- `plan_file_path` (string, required): Absolute path to implementation plan markdown
+- `sprint_filter` (string, optional): Specific sprint ID to process (e.g., "1.2a", "3.1")
+- `annotate_plan` (boolean, optional, default: false): Insert bead ID back-annotations into plan
+
+**Sprint Heading Pattern**:
+```regex
+^### Sprint (\d+[a-z]*)\.(\d+[a-z]*): (.+)$
+```
+
+**Captured Groups**:
+- Group 1: `phase_part` (e.g., "1", "3a")
+- Group 2: `sprint_part` (e.g., "1", "2a")
+- Group 3: `title` (e.g., "Core Schema Validation Script")
+
+**Metadata Sections to Parse**:
+```markdown
+**Worktree**: `../beads-ralph-worktrees/feature/1-2a-work`
+**Branch**: `feature/1-2a-work`
+**Source Branch**: `develop`
+
+**Dev Agents**:
+- `python-backend-dev` (sonnet)
+- `markdown-doc-writer` (haiku)
+
+**QA Agents**:
+- `qa-python-tests` (haiku) - Run pytest with >90% coverage
+- `qa-schema-validator` (haiku) - Validate against schema
+
+**Tasks**:
+- Create scripts/bead_schema.py with pydantic models
+- Create scripts/validate-bead-schema.py CLI tool
+- Add comprehensive test suite
+
+**Acceptance Criteria**:
+- All 38 tests passing
+- Coverage >90%
+- Schema validation working
+```
+
+**Parsing Rules**:
+1. Extract worktree path from `**Worktree**:` line
+2. Extract branch name from `**Branch**:` line
+3. Extract source branch from `**Source Branch**:` line
+4. Parse dev agents: Extract agent name and model (haiku|sonnet|opus) from parentheses
+5. Parse QA agents: Extract agent name, model, and prompt description after `-`
+6. Parse tasks: Each bullet becomes a dev_prompt string
+7. Parse acceptance criteria: Optional section, each bullet becomes validation requirement
+
+**Error Handling**:
+- Missing required section → `PARSE.MISSING_SECTION`
+- Malformed sprint heading → `PARSE.MARKDOWN`
+- Invalid phase/sprint pattern → `PARSE.INVALID_PATTERN`
+
+---
+
+### FR-2: Compile Sprint Dependencies
+
+**Description**: Generate dependency graph as directed acyclic graph (DAG) following five dependency patterns from docs/numbering.md.
+
+**Dependency Patterns**:
+
+1. **Sequential**: Sprint with no suffix depends on previous sequential sprint in same phase
+   - Example: `1.2` depends on `1.1`
+
+2. **Parallel**: Sprints with suffixes depend on previous sequential sprint; no inter-parallel dependencies
+   - Example: `1.2a` and `1.2b` both depend on `1.1`, but NOT on each other
+
+3. **Merge**: Next sequential sprint after parallel group depends on ALL parallel sprints
+   - Example: `1.3` depends on both `1.2a` AND `1.2b`
+
+4. **Phase Split**: First sprint of parallel phase track depends on last sprint of previous phase
+   - Example: `3a.1` depends on `2.3` (last of phase 2)
+
+5. **Phase Converge**: First sprint after multiple parallel phase tracks depends on last sprint of each track
+   - Example: `4.1` depends on both `3a.2` (last of phase 3a) AND `3b.2` (last of phase 3b)
+
+**Dependency Compilation Algorithm**:
+
+```text
+Input: List of sprint IDs from plan (e.g., ["1.1", "1.2a", "1.2b", "1.3"])
+Output: Map of sprint_id → [dependency_bead_ids]
+
+For each sprint_id in sprints:
+  1. Parse sprint into parts: phase, phase_number, phase_suffix, sprint_number, sprint_suffix
+  2. Determine dependency pattern:
+     - If sprint_suffix is non-empty (parallel sprint):
+       - Find previous sequential sprint in same phase
+       - If no previous sequential, apply Phase Split pattern
+     - Else if previous sprint was parallel group (merge sprint):
+       - Depend on ALL parallel sprints in previous group
+     - Else if sprint_number is 1 (phase start):
+       - Apply Phase Split or Phase Converge pattern
+     - Else (sequential sprint):
+       - Depend on previous sequential sprint in same phase
+  3. Map sprint_id to bead IDs using pattern: bd-<phase>-<sprint>-<name>
+  4. Add to dependency graph
+
+Validate DAG:
+  - No cycles (use DFS with gray/black sets)
+  - No dangling references (all dependency IDs exist in sprint list)
+  - No self-dependencies (sprint cannot depend on itself)
+  - All sprints reachable from graph root
+```
+
+**Helper Functions**:
+- `parse_parts(sprint_id)` → {phase, phase_number, phase_suffix, sprint_number, sprint_suffix, sprint_base}
+- `group_by_phase(sprints)` → map[phase_id] → list[sprint_ids]
+- `phase_last_sprint(phase, sprints_in_phase)` → sprint_id with highest sprint_number
+- `prev_sequential_sprint(phase, sprint_number, sprints_in_phase)` → previous sprint with no suffix
+- `parallel_group(phase, sprint_number, sprints_in_phase)` → all parallel sprints with same sprint_number
+
+**DAG Validation Requirements**:
+- Cycle detection: Use depth-first search with visited/exploring/explored sets
+- Dangling reference check: All dependency IDs must exist in generated bead set
+- Self-dependency check: No sprint can depend on itself
+- Reachability check: All sprints must be reachable from graph entry points
+
+**Error Handling**:
+- Cycle detected → `DEPENDENCY.CYCLE_DETECTED`
+- Dangling reference → `DEPENDENCY.UNRESOLVED`
+- Self-dependency → `DEPENDENCY.SELF_DEP`
+
+---
+
+### FR-3: Generate Bead IDs and Metadata
+
+**Description**: Create unique bead IDs and populate all 34 required schema fields.
+
+**Bead ID Pattern**: `bd-<phase>-<sprint>-<descriptive-name>`
+
+**ID Generation Algorithm**:
+```text
+Input: phase_part, sprint_part, sprint_title
+Output: bead_id
+
+1. Normalize phase: Remove dots, lowercase → "1", "3a"
+2. Normalize sprint: Remove dots, lowercase → "1", "2a", "2b"
+3. Derive name from sprint_title:
+   - Lowercase
+   - Replace spaces with hyphens
+   - Remove punctuation except hyphens
+   - Truncate to max 30 characters
+4. Construct: "bd-" + phase + "-" + sprint + "-" + name
+5. Validate uniqueness across all generated beads
+
+Examples:
+- Sprint 1.1: "Core Schema Validation Script" → bd-1-1-schema
+- Sprint 1.2a: "Example Work Bead" → bd-1-2a-work-bead
+- Sprint 3a.2b: "API Validation Layer" → bd-3a-2b-validation
+```
+
+**Required Fields (34 total)**:
+
+**Core Fields (15)**:
+1. `id` (string): Bead identifier using pattern above
+2. `title` (string): Sprint title from plan
+3. `description` (string): Concatenated dev_prompts or sprint description
+4. `status` (enum): Always "open" for new beads
+5. `priority` (int 0-4): Default 1
+6. `issue_type` (enum): "beads-ralph-work" or "beads-ralph-merge"
+7. `assignee` (string): Always "beads-ralph-scrum-master"
+8. `owner` (string): Always null initially
+9. `dependencies` (array): Bead IDs from dependency compilation
+10. `labels` (array): ["phase-XX", "sprint-X-Y", ...]
+11. `comments` (array): Empty array initially
+12. `external_ref` (string): null
+13. `created_at` (string): ISO 8601 timestamp
+14. `updated_at` (string): ISO 8601 timestamp (same as created_at)
+15. `closed_at` (string): null
+
+**Metadata Fields (19)**:
+1. `rig` (string): **ALWAYS** "beads-ralph" (required, identifies repository)
+2. `worktree_path` (string): From **Worktree**: line in plan
+3. `branch` (string): From **Branch**: line in plan
+4. `source_branch` (string): From **Source Branch**: line in plan
+5. `phase` (string): Phase part from sprint ID (e.g., "1", "3a")
+6. `sprint` (string): Full sprint ID (e.g., "1.2", "3a.2b")
+7. `plan_file` (string): Relative path to plan file
+8. `plan_section` (string): Exact sprint heading line
+9. `plan_sprint_id` (string): Sprint ID including suffixes
+10. `branches_to_merge` (array|null): null for work beads, array of branch names for merge beads
+11. `dev_agent_path` (string): ".claude/agents/<agent-name>" from Dev Agents section
+12. `dev_model` (enum): "haiku", "sonnet", or "opus" from Dev Agents section
+13. `dev_prompts` (array): List of task strings from Tasks section
+14. `qa_agents` (array): Array of QAAgent objects (see FR-4)
+15. `max_retry_attempts` (int): Default 3
+16. `attempt_count` (int): Default 0
+17. `scrum_master_session_id` (string): null initially
+18. `dev_agent_session_id` (string): null initially
+19. `dev_agent_executions` (array): Empty array initially
+20. `qa_agent_executions` (array): Empty array initially
+21. `pr_url` (string): null initially
+22. `pr_number` (int): null initially
+23. `scrum_result` (string): null initially
+
+**Issue Type Rules**:
+- Work bead: `issue_type = "beads-ralph-work"`, `branches_to_merge = null`
+- Merge bead: `issue_type = "beads-ralph-merge"`, `branches_to_merge = [...]`
+- Merge beads identified by title containing "merge" or "integration" (case-insensitive)
+
+**Label Generation**:
+```text
+labels = [
+  "phase-" + zero_pad(phase_number, 2),    // "phase-01", "phase-03"
+  "sprint-" + phase + "-" + sprint,        // "sprint-1-2a", "sprint-3a-2b"
+  ... additional labels from plan if specified
+]
+```
+
+---
+
+### FR-4: Populate QA Agent Schemas
+
+**Description**: Create QAAgent objects with required output_schema for each QA agent in plan.
+
+**QA Agent Object Structure**:
+```json
+{
+  "agent_path": ".claude/agents/<agent-name>",
+  "model": "haiku|sonnet|opus",
+  "prompt": "Run pytest with >90% coverage",
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "status": {
+        "enum": ["pass", "fail", "stop"],
+        "description": "Validation result"
+      },
+      "message": {
+        "type": "string",
+        "description": "Human-readable result message"
+      }
+    },
+    "required": ["status", "message"]
+  }
+}
+```
+
+**Extraction Algorithm**:
+```text
+For each line in **QA Agents**: section:
+  1. Parse pattern: `- <agent-name> (<model>) - <prompt-description>`
+  2. Extract agent_name (e.g., "qa-python-tests")
+  3. Extract model from parentheses (haiku|sonnet|opus)
+  4. Extract prompt after " - " separator
+  5. Construct agent_path: ".claude/agents/" + agent_name
+  6. Generate standard output_schema with status/message fields
+  7. Add to qa_agents array
+```
+
+**Output Schema Requirements**:
+- MUST include `status` property with enum ["pass", "fail", "stop"]
+- MUST include `message` property with type "string"
+- Both fields MUST be in `required` array
+- Additional properties MAY be added (e.g., `coverage_percent`, `test_count`)
+
+**Status Values**:
+- `"pass"`: Validation succeeded, proceed to next step
+- `"fail"`: Validation failed, dev agent should retry
+- `"stop"`: Critical failure, do not retry (e.g., security vulnerability detected)
+
+---
+
+### FR-5: Insert Beads into Dolt Database (CRITICAL)
+
+**Description**: Use bd CLI to insert beads into Dolt database via `bd create --json`.
+
+**Pre-flight Checks** (MUST RUN FIRST):
+```bash
+# 1. Verify bd CLI available
+bd --version
+# Expected: "bd version X.Y.Z"
+# If fails → DATABASE.CLI_NOT_FOUND
+
+# 2. Check database initialized
+bd info --json
+# Expected: {"database_path": "/path/.beads/beads.db", "daemon_running": true}
+# If no database_path → DATABASE.NOT_INITIALIZED
+# If daemon_running: false → DATABASE.DAEMON_NOT_RUNNING (may be OK for sandbox mode)
+```
+
+**Bead Insertion Workflow**:
+```bash
+# For each generated bead:
+
+# Step 1: Validate schema (Python pydantic)
+echo '<bead-json>' | python3 scripts/validate-bead-schema.py
+# Expected exit code: 0
+# Expected stdout: "✓ Valid bead"
+# If fails → VALIDATION.BEAD_SCHEMA, skip insertion
+
+# Step 2: Insert into database
+echo '<bead-json>' | bd create --json -
+# Alternative: Use temp file for large beads
+echo '<bead-json>' > /tmp/bead-<id>.json
+bd create --json /tmp/bead-<id>.json
+rm /tmp/bead-<id>.json
+
+# Step 3: Parse output
+# Expected JSON: {"id": "bd-1-2a-work", "status": "created"}
+# Extract bead ID from response
+
+# Step 4: Verify insertion (optional but recommended)
+bd show <bead-id> --json
+# Expected: Full bead JSON matching what was inserted
+# If fails → DATABASE.INSERT_FAILED
+```
+
+**Error Handling**:
+```bash
+# Handle duplicate ID
+# bd create output: {"error": "duplicate key value violates unique constraint"}
+# Error code → DEPENDENCY.DUPLICATE_ID
+
+# Handle constraint violations
+# bd create output: {"error": "constraint violation: ..."}
+# Error code → VALIDATION.CONSTRAINT_VIOLATION
+
+# Handle database lock (should not happen with Dolt, but handle anyway)
+# bd create timeout after 30s → DATABASE.TIMEOUT
+```
+
+**IMPORTANT CONSTRAINTS**:
+- ❌ NEVER write JSON files to `beads/` directory
+- ❌ NEVER access SQLite/Dolt files directly
+- ❌ NEVER bypass daemon RPC layer
+- ✅ ALWAYS use `bd create --json` for insertion
+- ✅ ALWAYS use `bd show --json` for verification
+- ✅ ALWAYS validate with pydantic BEFORE insertion
+
+**Rationale**: Go ralph loop queries database using `bd ready --json`. Beads MUST be in database for system integration.
+
+---
+
+### FR-6: Generate Formula Templates (SECONDARY)
+
+**Description**: Create reusable formula templates from sprint patterns for template-based bead generation.
+
+**Formula File Location**: `.beads/formulas/<formula-name>.formula.json` or `.formula.toml`
+
+**Formula Structure**:
+```json
+{
+  "formula": "sprint-work-pattern",
+  "description": "Standard work sprint pattern with dev/QA loop",
+  "version": 1,
+  "type": "workflow",
+  "phase": "liquid",
+  "vars": {
+    "sprint_id": {
+      "description": "Sprint identifier (e.g., 1.2a)",
+      "required": true,
+      "pattern": "^\\d+[a-z]*\\.\\d+[a-z]*$"
+    },
+    "sprint_title": {
+      "description": "Sprint title",
+      "required": true
+    },
+    "worktree_path": {
+      "description": "Path to git worktree",
+      "required": true
+    },
+    "branch": {
+      "description": "Git branch name",
+      "required": true
+    },
+    "dev_agent": {
+      "description": "Dev agent name",
+      "default": "python-backend-dev"
+    },
+    "dev_model": {
+      "description": "Dev agent model",
+      "default": "sonnet",
+      "enum": ["haiku", "sonnet", "opus"]
+    }
+  },
+  "steps": [
+    {
+      "id": "work",
+      "title": "{{sprint_title}}",
+      "description": "Sprint {{sprint_id}} work in worktree {{worktree_path}}",
+      "type": "task",
+      "priority": 1,
+      "labels": ["sprint-{{sprint_id}}"],
+      "assignee": "beads-ralph-scrum-master"
+    }
+  ]
+}
+```
+
+**Formula Generation Use Cases**:
+1. **Repeated sprint patterns**: When multiple sprints follow same structure
+2. **Parameterized workflows**: Same workflow, different inputs per sprint
+3. **Testing**: Generate test sprints with controlled variations
+4. **Bulk creation**: Create 10+ similar beads with different parameters
+
+**When to Use Formulas vs Direct Insertion**:
+- Use formulas: Repeated patterns, testing, bulk operations
+- Use direct insertion: One-off sprints, unique requirements, existing plans
+
+---
+
+### FR-7: Pour Formulas to Create Beads (SECONDARY)
+
+**Description**: Execute formula templates with variables to create bead hierarchies in database.
+
+**Pour Command**:
+```bash
+# Basic pour
+bd mol pour sprint-work-pattern \
+  --var sprint_id=1.2a \
+  --var sprint_title="Example Work Bead" \
+  --var worktree_path="../beads-ralph-worktrees/feature/1-2a-work" \
+  --var branch="feature/1-2a-work" \
+  --json
+
+# Output: {"id": "bd-sprint-work-pattern-001", "steps_created": 1}
+```
+
+**Pour Workflow**:
+```text
+1. Load formula from .beads/formulas/<formula-id>.formula.json
+2. Validate required variables provided
+3. Validate variable values match patterns/enums
+4. Substitute {{variable}} placeholders in formula
+5. Generate step IDs (e.g., bd-<formula>-<step-id>-<instance>)
+6. Create beads via bd mol pour (inserts into database)
+7. Return poured molecule ID and created bead IDs
+```
+
+**Pour Options**:
+```bash
+# Dry-run: Preview what would be created
+bd mol pour <formula-id> --var key=value --dry-run
+
+# Assign root issue to agent
+bd mol pour <formula-id> --var key=value --assignee alice --json
+
+# Attach additional formulas during pour
+bd mol pour <formula-id> --attach <other-formula> --json
+```
+
+**Pour Error Handling**:
+- Missing required variable → `FORMULA.MISSING_VAR`
+- Invalid variable value (pattern mismatch) → `FORMULA.INVALID_VAR`
+- Formula not found → `FORMULA.NOT_FOUND`
+- Pour command fails → `FORMULA.POUR_FAILED`
+
+**Wisp Alternative** (Ephemeral Testing):
+```bash
+# Create ephemeral wisp for testing (auto-cleanup after 24h)
+bd mol wisp <formula-id> --var key=value --json
+
+# List all wisps
+bd mol wisp list --json
+
+# Manually clean up wisps
+bd mol wisp gc --json
+
+# Burn specific wisp (delete without digest)
+bd mol burn <wisp-id> --json
+```
+
+**Wisp Use Cases**:
+- Testing formulas before committing to persistent pours
+- Temporary workflows that shouldn't clutter database
+- Exploration/prototyping of sprint patterns
+
+---
+
+### FR-8: Validate Bead Schema (PRE-INSERTION)
+
+**Description**: Validate each bead against pydantic schema BEFORE inserting into database.
+
+**Validation Workflow**:
+```bash
+# Step 1: Generate bead JSON in memory
+bead_json = generate_bead(sprint)
+
+# Step 2: Validate with pydantic
+echo '<bead-json>' | python3 scripts/validate-bead-schema.py
+# Exit code 0 → Valid
+# Exit code 1 → Invalid, check stderr for errors
+
+# Step 3: Parse validation errors if failed
+# stderr format:
+# "Validation errors:
+#  - field metadata.phase must match pattern ^\d+[a-z]*$
+#  - field metadata.sprint must match pattern ^\d+[a-z]*\.\d+[a-z]*$"
+
+# Step 4: Only insert if validation passes
+if validation_passed:
+  bd create --json <bead-json>
+else:
+  return error with validation details
+```
+
+**Validation Rules** (from scripts/bead_schema.py):
+```python
+# Phase pattern
+phase: str = Field(..., pattern=r'^\d+[a-z]*$')
+# Valid: "1", "3a", "10"
+# Invalid: "1.2", "a", "3-a"
+
+# Sprint pattern
+sprint: str = Field(..., pattern=r'^\d+[a-z]*\.\d+[a-z]*$')
+# Valid: "1.1", "1.2a", "3a.2b"
+# Invalid: "1", "1-2", "a.b"
+
+# Title must be non-empty after stripping whitespace
+title: str = Field(..., min_length=1)
+
+# Status must be valid enum
+status: Literal["open", "in_progress", "blocked", "closed"]
+
+# Priority must be 0-4
+priority: int = Field(..., ge=0, le=4)
+
+# Rig must be "beads-ralph"
+rig: str = Field(..., pattern=r'^beads-ralph$')
+
+# Issue type must be valid enum
+issue_type: Literal["beads-ralph-work", "beads-ralph-merge"]
+
+# Assignee must be "beads-ralph-scrum-master"
+assignee: str = Field(..., pattern=r'^beads-ralph-scrum-master$')
+
+# Dev model must be valid enum
+dev_model: Literal["haiku", "sonnet", "opus"]
+
+# QA agents must be non-empty array
+qa_agents: List[QAAgent] = Field(..., min_items=1)
+
+# QA agent output_schema must include status and message
+# (validated in custom validator)
+```
+
+**Error Handling**:
+- Validation fails → `VALIDATION.BEAD_SCHEMA`
+- Missing required field → `VALIDATION.MISSING_FIELD`
+- Pattern mismatch → `VALIDATION.INVALID_PATTERN`
+- Constraint violation → `VALIDATION.CONSTRAINT`
+
+**Rationale**: Pydantic provides detailed, field-specific error messages. Database may not catch all schema violations. Validating before insertion prevents polluting database with invalid beads.
+
+---
+
+### FR-9: Back-Annotate Plan (OPTIONAL)
+
+**Description**: Insert bead ID annotations into plan markdown after sprint headings for bi-directional traceability.
+
+**Annotation Format**:
+```markdown
+### Sprint 1.2: User Authentication
+<!-- beads-ralph: bd-1-2-user-auth -->
+
+**Worktree**: ...
+```
+
+**Annotation Rules**:
+- Inserted on line immediately after sprint heading
+- Preserves all other plan content unchanged
+- Replaces existing annotation if present
+- Only annotates sprints that were processed (respects sprint_filter)
+
+**Insertion Algorithm**:
+```text
+Input: plan_text (string), sprint_to_bead_map (dict)
+Output: annotated_plan_text (string)
+
+lines = plan_text.splitlines()
+out = []
+i = 0
+
+while i < len(lines):
+  line = lines[i]
+  out.append(line)
+
+  if matches_sprint_heading(line):
+    sprint_id = extract_sprint_id(line)
+
+    if sprint_id in sprint_to_bead_map:
+      bead_id = sprint_to_bead_map[sprint_id]
+      annotation = "<!-- beads-ralph: " + bead_id + " -->"
+
+      # Check if next line is existing annotation
+      if i+1 < len(lines):
+        next_line = lines[i+1]
+        if next_line.strip().startswith("<!-- beads-ralph:"):
+          # Replace existing annotation
+          out.append(annotation)
+          i += 1  # Skip old annotation line
+        else:
+          # Insert new annotation
+          out.append(annotation)
+      else:
+        # End of file, just insert
+        out.append(annotation)
+
+  i += 1
+
+return "\n".join(out) + "\n"
+```
+
+**Sprint Heading Detection**:
+```regex
+^### Sprint (\d+[a-z]*)\.(\d+[a-z]*): (.+)$
+```
+
+**Error Handling**:
+- Sprint has no bead ID → `DEPENDENCY.UNRESOLVED`
+- Duplicate annotation for same sprint → `DEPENDENCY.DUPLICATE_ID`
+- No matching sprint headings found → `PARSE.MARKDOWN`
+
+**Use Cases**:
+1. **Plan → Bead**: Click annotation to find bead in database
+2. **Bead → Plan**: Use `plan_file` + `plan_section` metadata to find sprint
+3. **Agent Navigation**: Scrum-master reads plan to understand context
+4. **Human Review**: Reviewers see which beads correspond to which sprints
+
+---
+
+### FR-10: Return Structured Result
+
+**Description**: Return fenced JSON with execution results, database status, and error details.
+
+**Success Response** (Plan-to-Beads):
+```json
+{
+  "success": true,
+  "data": {
+    "mode": "direct",
+    "beads_created": 3,
+    "bead_ids": [
+      "bd-1-1-schema",
+      "bd-1-2a-work",
+      "bd-1-2b-merge"
+    ],
+    "sprints_processed": ["1.1", "1.2a", "1.2b"],
+    "database_status": "inserted",
+    "plan_annotated": true,
+    "plan_file_updated": true
+  },
+  "error": null
+}
+```
+
+**Success Response** (Formula Pour):
+```json
+{
+  "success": true,
+  "data": {
+    "mode": "formula",
+    "formulas_created": 1,
+    "formulas_poured": 1,
+    "molecules_created": ["bd-sprint-work-pattern-001"],
+    "beads_created": 5,
+    "bead_ids": [
+      "bd-sprint-work-pattern-001-work",
+      "bd-sprint-work-pattern-001-qa-1",
+      "bd-sprint-work-pattern-001-qa-2",
+      "bd-sprint-work-pattern-001-merge",
+      "bd-sprint-work-pattern-001-pr"
+    ],
+    "database_status": "poured"
+  },
+  "error": null
+}
+```
+
+**Failure Response**:
+```json
+{
+  "success": false,
+  "data": null,
+  "error": {
+    "code": "DATABASE.INSERT_FAILED",
+    "message": "Failed to insert bead bd-1-2a-work into database",
+    "details": "bd create command failed with exit code 1: duplicate key constraint",
+    "recoverable": true,
+    "suggested_action": "Check if bead already exists with: bd show bd-1-2a-work --json"
+  }
+}
+```
+
+**Response Fields**:
+- `success` (bool): Operation succeeded or failed
+- `data` (object|null): Results if successful, null if failed
+- `data.mode` (string): "direct" for plan-to-beads, "formula" for formula pour
+- `data.beads_created` (int): Count of beads inserted into database
+- `data.bead_ids` (array): List of bead IDs inserted (for verification)
+- `data.sprints_processed` (array): List of sprint IDs processed
+- `data.database_status` (string): "inserted" or "poured"
+- `data.plan_annotated` (bool): Whether plan was back-annotated
+- `error` (object|null): Error details if failed, null if successful
+- `error.code` (string): Error code for programmatic handling
+- `error.message` (string): Human-readable error message
+- `error.details` (string): Additional context (stack trace, command output)
+- `error.recoverable` (bool): Whether error can be fixed and retried
+- `error.suggested_action` (string): Concrete next step to resolve
+
+---
+
+## Non-Functional Requirements
+
+### NFR-1: Database Integration (CRITICAL)
+
+**Requirement**: Agent MUST use bd CLI for ALL database operations.
+
+**Prohibited Actions**:
+- ❌ Writing JSON files to `beads/` directory
+- ❌ Direct SQLite/Dolt file access via Python libraries
+- ❌ Bypassing daemon RPC layer
+- ❌ Assuming file-level database access
+
+**Required Actions**:
+- ✅ Use `bd create --json` for bead insertion
+- ✅ Use `bd show --json` for bead retrieval/verification
+- ✅ Use `bd info --json` for pre-flight checks
+- ✅ Use `bd mol pour` for formula execution
+- ✅ Parse JSON output from all bd CLI commands
+- ✅ Handle bd CLI errors gracefully
+
+**Integration Points with Go Ralph Loop**:
+```text
+1. Ralph: bd ready --json → Finds ready beads (deps satisfied, not claimed)
+2. Ralph: bd update bd-1-2a --claim --json → Atomically claims bead
+3. Ralph: Launches scrum-master with bead metadata
+4. Scrum-master: bd show bd-1-2a --json → Reads full bead details
+5. Scrum-master: Executes dev/QA loop in worktree
+6. Scrum-master: bd update bd-1-2a --status closed --json → Marks complete
+7. Scrum-master: bd update bd-1-2a --metadata '{"pr_url": "..."}' --json
+8. Ralph: bd ready --json → Finds next ready beads (dependencies unblocked)
+```
+
+**Rationale**: Beads uses Dolt SQL Server (MySQL-compatible) with daemon serialization. File-level access bypasses transaction semantics, locking, and multi-process safety. Go ralph loop expects beads in database, not filesystem.
+
+---
+
+### NFR-2: Concurrency Safety
+
+**Requirement**: Agent must support concurrent execution by multiple architect instances without race conditions.
+
+**Concurrency Scenarios**:
+1. Multiple agents processing different sprints from same plan
+2. Multiple agents processing different plans simultaneously
+3. Agent execution while Go ralph loop is running
+4. Agent execution while bd daemon is serving other requests
+
+**Strategies**:
+- **Unique bead IDs**: Include timestamp or random suffix if parallel architects
+- **Database constraints**: Rely on unique key constraints for ID conflicts
+- **Atomic operations**: Use `bd update --claim` for atomic work assignment
+- **Daemon serialization**: All writes serialized via beads daemon RPC
+- **No shared file writes**: Database serializes, no need for file locks
+
+**Dolt Concurrency Benefits**:
+- MySQL-compatible SQL server (no file-level locks)
+- Daemon serializes writes via RPC interface
+- 40+ concurrent bd processes supported (vs SQLite's single writer)
+- Cell-level merge (not line-level JSONL conflicts)
+
+**Error Handling for Conflicts**:
+- Duplicate ID insertion → `DEPENDENCY.DUPLICATE_ID` (recoverable, use different ID)
+- Optimistic lock failure → Retry with exponential backoff
+- Daemon timeout → `DATABASE.TIMEOUT` (recoverable, retry)
+
+---
+
+### NFR-3: Validation Before Insertion
+
+**Requirement**: Validate schema compliance BEFORE inserting into database.
+
+**Validation Workflow**:
+```text
+For each bead:
+  1. Generate bead JSON in memory
+  2. Validate with pydantic (scripts/validate-bead-schema.py)
+  3. If validation passes → Insert with bd create --json
+  4. If validation fails → Return error WITHOUT inserting
+```
+
+**Rationale**:
+- Database may not catch all schema violations (e.g., invalid patterns)
+- Pydantic provides detailed, field-specific error messages
+- Prevents polluting database with invalid beads
+- Easier to debug validation errors before insertion
+- Rollback is easier (no database cleanup needed)
+
+**Validation Performance**:
+- Python pydantic validation is fast (<10ms per bead)
+- Validation happens in memory before any I/O
+- Acceptable overhead for correctness guarantee
+
+---
+
+### NFR-4: Idempotency
+
+**Requirement**: Agent should be idempotent where possible (same inputs → same outputs).
+
+**Idempotency Guarantees**:
+- Same plan file + same sprint_filter → same bead structure (IDs, metadata, dependencies)
+- Timestamps (created_at, updated_at) MAY differ between runs
+- Database insertion is NOT idempotent (duplicate IDs cause errors)
+
+**Idempotency Strategies**:
+- Deterministic bead ID generation (no random suffixes unless required)
+- Consistent dependency compilation (stable sort order)
+- Stable label generation (same inputs → same labels)
+
+**Non-Idempotent Operations**:
+- Database insertion (use `bd show` to check if bead exists before inserting)
+- Timestamp generation (always uses current time)
+- Plan back-annotation (updates plan file, not reversible)
+
+**Recommendation**: Provide `--check-existing` flag to query database before insertion and skip duplicates.
+
+---
+
+### NFR-5: Error Recovery
+
+**Requirement**: Provide clear error messages with concrete recovery steps.
+
+**Error Categories**:
+
+1. **Database Errors** (Fatal):
+   - `DATABASE.CLI_NOT_FOUND`: bd command not in PATH
+   - `DATABASE.NOT_INITIALIZED`: No .beads/ directory found
+   - `DATABASE.DAEMON_NOT_RUNNING`: Daemon not running (may be OK in sandbox mode)
+   - `DATABASE.INSERT_FAILED`: bd create command failed
+   - `DATABASE.TIMEOUT`: Operation timed out
+
+2. **Validation Errors** (Recoverable):
+   - `VALIDATION.BEAD_SCHEMA`: Pydantic validation failed
+   - `VALIDATION.MISSING_FIELD`: Required field missing
+   - `VALIDATION.INVALID_PATTERN`: Field doesn't match pattern
+   - `VALIDATION.CONSTRAINT`: Database constraint violated
+
+3. **Dependency Errors** (Recoverable):
+   - `DEPENDENCY.UNRESOLVED`: Dangling dependency reference
+   - `DEPENDENCY.CYCLE_DETECTED`: Circular dependency in DAG
+   - `DEPENDENCY.DUPLICATE_ID`: Non-unique bead ID
+   - `DEPENDENCY.SELF_DEP`: Sprint depends on itself
+
+4. **Parse Errors** (Recoverable):
+   - `PARSE.MARKDOWN`: Malformed sprint heading
+   - `PARSE.MISSING_SECTION`: Required metadata section missing
+   - `PARSE.INVALID_PATTERN`: Phase/sprint pattern invalid
+
+5. **Formula Errors** (Recoverable):
+   - `FORMULA.NOT_FOUND`: Formula template not found
+   - `FORMULA.MISSING_VAR`: Required variable not provided
+   - `FORMULA.INVALID_VAR`: Variable value doesn't match pattern
+   - `FORMULA.POUR_FAILED`: bd mol pour command failed
+
+6. **IO Errors** (Fatal):
+   - `IO.FILE_NOT_FOUND`: Plan file not found
+   - `IO.PERMISSION_DENIED`: Cannot read/write file
+
+**Error Response Format**:
+```json
+{
+  "error": {
+    "code": "VALIDATION.INVALID_PATTERN",
+    "message": "Phase pattern validation failed for sprint 1.2a",
+    "details": "metadata.phase value '1.2' does not match pattern '^\\d+[a-z]*$'",
+    "recoverable": true,
+    "suggested_action": "Fix phase pattern in plan: phase should be '1', not '1.2'"
+  }
+}
+```
+
+**Recovery Guidance**:
+- Include file path and line number for parse errors
+- Include field path for validation errors (e.g., "metadata.phase")
+- Include command that failed for database errors
+- Provide exact fix for recoverable errors
+
+---
+
+## Examples
+
+### Example 1: Simple Sequential Sprint (Direct Insertion)
+
+**Plan Section**:
+```markdown
+### Sprint 1.1: Core Schema Validation Script
+
+**Worktree**: `../beads-ralph-worktrees/feature/1-1-schema-validator`
+**Branch**: `feature/1-1-schema-validator`
+**Source Branch**: `develop`
+
+**Dev Agents**:
+- `python-backend-dev` (sonnet)
+
+**QA Agents**:
+- `qa-python-tests` (haiku) - Run pytest with >90% coverage
+
+**Tasks**:
+- Create scripts/bead_schema.py with pydantic models
+- Create scripts/validate-bead-schema.py CLI tool
+- Create comprehensive test suite
+```
+
+**Agent Invocation**:
+```bash
+beads-mason \
+  --plan-file pm/2026-02-08-implementation-plan.md \
+  --sprint-filter 1.1
+```
+
+**Generated Bead** (before insertion):
+```json
+{
+  "id": "bd-1-1-schema",
+  "title": "Core Schema Validation Script",
+  "description": "Create scripts/bead_schema.py with pydantic models. Create scripts/validate-bead-schema.py CLI tool. Create comprehensive test suite.",
+  "status": "open",
+  "priority": 1,
+  "issue_type": "beads-ralph-work",
+  "assignee": "beads-ralph-scrum-master",
+  "owner": null,
+  "dependencies": [],
+  "labels": ["phase-01", "sprint-1-1"],
+  "comments": [],
+  "external_ref": null,
+  "created_at": "2026-02-08T10:00:00Z",
+  "updated_at": "2026-02-08T10:00:00Z",
+  "closed_at": null,
+  "metadata": {
+    "rig": "beads-ralph",
+    "worktree_path": "../beads-ralph-worktrees/feature/1-1-schema-validator",
+    "branch": "feature/1-1-schema-validator",
+    "source_branch": "develop",
+    "phase": "1",
+    "sprint": "1.1",
+    "plan_file": "pm/2026-02-08-implementation-plan.md",
+    "plan_section": "### Sprint 1.1: Core Schema Validation Script",
+    "plan_sprint_id": "1.1",
+    "branches_to_merge": null,
+    "dev_agent_path": ".claude/agents/python-backend-dev",
+    "dev_model": "sonnet",
+    "dev_prompts": [
+      "Create scripts/bead_schema.py with pydantic models",
+      "Create scripts/validate-bead-schema.py CLI tool",
+      "Create comprehensive test suite"
+    ],
+    "qa_agents": [
+      {
+        "agent_path": ".claude/agents/qa-python-tests",
+        "model": "haiku",
+        "prompt": "Run pytest with >90% coverage",
+        "output_schema": {
+          "type": "object",
+          "properties": {
+            "status": {"enum": ["pass", "fail", "stop"]},
+            "message": {"type": "string"}
+          },
+          "required": ["status", "message"]
+        }
+      }
+    ],
+    "max_retry_attempts": 3,
+    "attempt_count": 0,
+    "scrum_master_session_id": null,
+    "dev_agent_session_id": null,
+    "dev_agent_executions": [],
+    "qa_agent_executions": [],
+    "pr_url": null,
+    "pr_number": null,
+    "scrum_result": null
+  }
+}
+```
+
+**Database Insertion**:
+```bash
+# Validate
+echo '<bead-json>' | python3 scripts/validate-bead-schema.py
+# Output: ✓ Valid bead
+
+# Insert
+echo '<bead-json>' | bd create --json -
+# Output: {"id": "bd-1-1-schema", "status": "created"}
+
+# Verify
+bd show bd-1-1-schema --json
+# Output: <full-bead-json>
+```
+
+**Agent Output**:
+```json
+{
+  "success": true,
+  "data": {
+    "mode": "direct",
+    "beads_created": 1,
+    "bead_ids": ["bd-1-1-schema"],
+    "sprints_processed": ["1.1"],
+    "database_status": "inserted",
+    "plan_annotated": false
+  },
+  "error": null
+}
+```
+
+---
+
+### Example 2: Parallel Sprints with Merge (Direct Insertion)
+
+**Plan Sections**:
+```markdown
+### Sprint 1.2a: Example Work Bead (Parallel)
+...
+
+### Sprint 1.2b: Example Merge Bead (Parallel)
+...
+
+### Sprint 1.3: Integration & Documentation
+```
+
+**Agent Invocation**:
+```bash
+beads-mason \
+  --plan-file pm/2026-02-08-implementation-plan.md \
+  --sprint-filter "1.2a,1.2b,1.3"
+```
+
+**Dependency Resolution**:
+```json
+{
+  "bd-1-2a-work": {
+    "dependencies": ["bd-1-1-schema"]
+  },
+  "bd-1-2b-merge": {
+    "dependencies": ["bd-1-1-schema"]
+  },
+  "bd-1-3-integration": {
+    "dependencies": ["bd-1-2a-work", "bd-1-2b-merge"]
+  }
+}
+```
+
+**Database Insertion** (3 beads):
+```bash
+# Insert first parallel bead
+echo '<bead-1.2a-json>' | bd create --json -
+
+# Insert second parallel bead
+echo '<bead-1.2b-json>' | bd create --json -
+
+# Insert merge bead
+echo '<bead-1.3-json>' | bd create --json -
+
+# Verify all inserted
+bd list --label sprint-1-2a,sprint-1-2b,sprint-1-3 --json
+```
+
+**Agent Output**:
+```json
+{
+  "success": true,
+  "data": {
+    "mode": "direct",
+    "beads_created": 3,
+    "bead_ids": [
+      "bd-1-2a-work",
+      "bd-1-2b-merge",
+      "bd-1-3-integration"
+    ],
+    "sprints_processed": ["1.2a", "1.2b", "1.3"],
+    "database_status": "inserted",
+    "plan_annotated": false
+  },
+  "error": null
+}
+```
+
+---
+
+### Example 3: Formula Pour for Repeated Pattern
+
+**Use Case**: Generate 5 identical work sprints with different parameters
+
+**Formula Template** (`.beads/formulas/work-sprint.formula.json`):
+```json
+{
+  "formula": "work-sprint",
+  "description": "Standard work sprint with dev/QA loop",
+  "version": 1,
+  "type": "workflow",
+  "phase": "liquid",
+  "vars": {
+    "sprint_id": {
+      "description": "Sprint identifier",
+      "required": true,
+      "pattern": "^\\d+[a-z]*\\.\\d+[a-z]*$"
+    },
+    "title": {
+      "description": "Sprint title",
+      "required": true
+    },
+    "worktree": {
+      "description": "Worktree path",
+      "required": true
+    }
+  },
+  "steps": [
+    {
+      "id": "work",
+      "title": "{{title}}",
+      "description": "Sprint {{sprint_id}} work",
+      "type": "task",
+      "priority": 1
+    }
+  ]
+}
+```
+
+**Agent Invocation**:
+```bash
+# Pour sprint 2.1
+bd mol pour work-sprint \
+  --var sprint_id=2.1 \
+  --var title="Backend API Layer" \
+  --var worktree="../worktrees/feature/2-1-api" \
+  --json
+
+# Pour sprint 2.2
+bd mol pour work-sprint \
+  --var sprint_id=2.2 \
+  --var title="Frontend Components" \
+  --var worktree="../worktrees/feature/2-2-frontend" \
+  --json
+
+# ... pour 3 more sprints
+```
+
+**Agent Output** (per pour):
+```json
+{
+  "success": true,
+  "data": {
+    "mode": "formula",
+    "formulas_poured": 1,
+    "molecules_created": ["bd-work-sprint-001"],
+    "beads_created": 1,
+    "bead_ids": ["bd-work-sprint-001-work"],
+    "database_status": "poured"
+  },
+  "error": null
+}
+```
+
+---
+
+## Testing Requirements
+
+### Minimum Test Cases
+
+1. **Sequential Sprints** (1.1, 1.2, 1.3)
+   - Expected: `1.2` depends on `1.1`, `1.3` depends on `1.2`
+
+2. **Parallel Sprints** (1.1, 1.2a, 1.2b)
+   - Expected: `1.2a` and `1.2b` both depend on `1.1`, not on each other
+
+3. **Merge Sprint** (1.2a, 1.2b, 1.3)
+   - Expected: `1.3` depends on both `1.2a` AND `1.2b`
+
+4. **Phase Split** (2.3, 3a.1, 3b.1)
+   - Expected: `3a.1` and `3b.1` both depend on `2.3`
+
+5. **Phase Converge** (3a.2, 3b.2, 4.1)
+   - Expected: `4.1` depends on both `3a.2` AND `3b.2`
+
+6. **Duplicate ID**
+   - Two sprints with same derived bead ID → `DEPENDENCY.DUPLICATE_ID`
+
+7. **Dangling Reference**
+   - Sprint references non-existent dependency → `DEPENDENCY.UNRESOLVED`
+
+8. **Cycle Detection**
+   - Sprint A depends on B, B depends on A → `DEPENDENCY.CYCLE_DETECTED`
+
+9. **Missing Required Field**
+   - Bead missing `title` field → `VALIDATION.MISSING_FIELD`
+
+10. **Invalid Pattern**
+    - Phase "1.2" (should be "1") → `VALIDATION.INVALID_PATTERN`
+
+### Integration Tests
+
+1. **bd CLI availability**
+   - Verify pre-flight checks detect missing bd command
+
+2. **Database insertion**
+   - Verify bd create successfully inserts bead
+
+3. **Bead retrieval**
+   - Verify bd show returns inserted bead with correct fields
+
+4. **Ready queue**
+   - Verify bd ready finds inserted beads with satisfied dependencies
+
+5. **Formula pour**
+   - Verify bd mol pour creates beads from formula template
+
+---
+
+## Change Log
+
+### v2.0.0 (Draft) - 2026-02-08
+
+**BREAKING CHANGES**:
+- ❌ **REMOVED**: JSON file writing to `beads/` directory
+- ✅ **ADDED**: bd CLI integration (bd create, bd show, bd info)
+- ✅ **ADDED**: Dolt database pre-flight checks
+- ✅ **ADDED**: Formula generation and pouring (FR-6, FR-7)
+- ✅ **CHANGED**: Output format (bead_ids instead of bead_files)
+- ✅ **CHANGED**: Focus on database operations, not filesystem
+
+**Rationale**: Integration with Go ralph loop requires beads in Dolt database. Formula support enables template-based bead generation for repeated patterns.
+
+### v1.2.0 - 2026-02-08
+
+- ✅ Executable dependency compilation pseudocode
+- ✅ Back-annotation algorithm with regex/insertion logic
+- ✅ Concrete metadata extraction guidance
+- ✅ 3 examples + 6 test cases
+
+**Issue**: Did not integrate with bd CLI or Dolt database.
+
+---
+
+## References
+
+- **Beads CLI**: `/Users/randlee/Documents/github/beads/docs/CLI_REFERENCE.md`
+- **Dolt Backend**: `/Users/randlee/Documents/github/github-research/beads/dolt.md`
+- **Formula System**: `/Users/randlee/Documents/github/github-research/beads/formula-deep-dive.md`
+- **Database Schema**: `/Users/randlee/Documents/github/github-research/beads/database-schema-architecture.md`
+- **beads-ralph Schema**: `scripts/bead_schema.py`
+- **Numbering Scheme**: `docs/numbering.md`

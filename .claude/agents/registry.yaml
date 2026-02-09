@@ -8,3 +8,6 @@ agents:
   beads-smelter:
     version: 1.0.0
     path: .claude/agents/beads-smelter.md
+  beads-research-expert:
+    version: 1.0.0
+    path: .claude/agents/beads-research-expert.md
