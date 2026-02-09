@@ -11,16 +11,31 @@
 
 This plan implements beads-ralph MVP using the system itself (dogfooding). Each sprint follows the dev-QA loop pattern with mandatory PR creation to `develop` branch.
 
+**MVP Goal**: User provides well-thought-out plan → beads-chronicler creates beads → Go Ralph Loop executes autonomously → PRs generated → Done.
+
 ### Phase Summary
 
-| Phase | Focus | Sprints | Parallelization |
-|-------|-------|---------|-----------------|
-| **1** | Schema & Validation | 1.1, 1.2a/b, 1.3 | High |
-| **2** | Beads Architect Agent | 2.1, 2.2a/b, 2.3 | Medium |
-| **3** | Planning System | 3.1a/b, 3.2 | High |
-| **4** | Go Ralph Loop | 4.1, 4.2a/b/c, 4.3 | High |
-| **5** | Scrum-Master Agent | 5.1, 5.2, 5.3 | Sequential |
-| **6** | Example Agents & MVP Test | 6.1a/b/c, 6.2, 6.3 | High |
+| Phase | Focus | Sprints | Status | Notes |
+|-------|-------|---------|--------|-------|
+| **1** | Schema & Validation | 1.1, 1.2a/b, 1.3 | ✅ DONE | Pydantic models, examples, CI/CD |
+| **2** | Beads Architect Agent | 2.1, 2.2a/b, 2.3 | ✅ DONE | Mason/alchemist/smelter/scribe (steampunk theme) |
+| **3** | ~~Planning System~~ | ~~3.1a/b, 3.2~~ | ❌ **OUT OF SCOPE** | Interactive planning is post-MVP |
+| **4** | Go Ralph Loop | 4.1, 4.2a/b/c, 4.3 | 🔄 NEXT | Autonomous orchestration |
+| **5** | Scrum-Master Agent | 5.1, 5.2, 5.3 | ⏳ PENDING | Dev/QA execution per bead |
+| **6** | Example Agents & MVP Test | 6.1a/b/c, 6.2, 6.3 | ⏳ PENDING | End-to-end validation |
+
+### Phase 3 Scope Change
+
+**Original Plan**: Interactive planning system (beads-ralph-planner skill, plan-review agent)
+
+**MVP Decision**: **OUT OF SCOPE** - Assumes user provides well-thought-out plan upfront. No interactive refinement or automated validation needed for MVP.
+
+**What We Have Instead**:
+- ✅ beads-chronicler skill (Phase 2) - Direct plan → beads conversion
+- ✅ Manual plan validation (human reviews plan quality)
+- ✅ Schema validation (pydantic catches bead errors)
+
+**Post-MVP**: Interactive planning can be added later if needed.
 
 ### Key Agents
 
@@ -362,9 +377,45 @@ This plan implements beads-ralph MVP using the system itself (dogfooding). Each 
 
 ---
 
-## Phase 3: Planning System
+## Phase 3: ~~Planning System~~ ❌ OUT OF SCOPE
 
-**Goal**: Complete the planning workflow (skill + review agent).
+**Original Goal**: Complete the planning workflow (skill + review agent).
+
+**MVP Decision**: **SKIPPED** - Interactive planning is out of scope for MVP.
+
+**Rationale**:
+- MVP assumes user provides well-thought-out plan
+- beads-chronicler (Phase 2) handles plan → beads conversion
+- No need for interactive refinement or automated validation
+- Manual plan review is sufficient for MVP
+
+**What Replaces It**:
+- ✅ beads-chronicler skill (built in Phase 2)
+- ✅ Manual plan quality review by user
+- ✅ Schema validation catches bead errors
+
+**Post-MVP**: Can add interactive planning system later if needed.
+
+---
+
+### ~~Sprint 3.1a: Planning Skill Definition~~ (SKIPPED)
+
+**Would Have Created**: `.claude/skills/beads-ralph-planner/SKILL.md`
+**Why Skipped**: Interactive planning out of scope
+
+---
+
+### ~~Sprint 3.1b: Plan Review Agent~~ (SKIPPED)
+
+**Would Have Created**: `.claude/agents/plan-review.md`
+**Why Skipped**: Automated validation out of scope (manual review sufficient)
+
+---
+
+### ~~Sprint 3.2: Planning System Integration~~ (SKIPPED)
+
+**Would Have Integrated**: planner + review agent
+**Why Skipped**: No components to integrate (both skipped)
 
 ### Sprint 3.1a: Planning Skill Definition (Parallel)
 
@@ -1081,7 +1132,13 @@ Features to build using beads-ralph itself:
 
 ---
 
-**Plan Status**: Phase 1 in progress
-**Next Action**: Sprint 1.3 (Integration & Documentation - merge 1.2a/b)
-**Estimated MVP Completion**: 6 phases, ~24 sprints, highly parallelized
-**Progress**: 3/26 sprints complete (Sprint 1.1 ✅, 1.2a ✅, 1.2b ✅)
+**Plan Status**: Phase 2 Complete, Phase 3 Skipped
+**Next Action**: Phase 4 - Go Ralph Loop (autonomous orchestration)
+**Estimated MVP Completion**: 5 phases (Phase 3 skipped), ~20 sprints remaining
+**Progress**:
+- ✅ Phase 1: Complete (4/4 sprints)
+- ✅ Phase 2: Complete (4/4 sprints)
+- ❌ Phase 3: SKIPPED (out of scope)
+- 🔄 Phase 4: Next (Go Ralph Loop)
+- ⏳ Phase 5: Pending (Scrum-Master Agent)
+- ⏳ Phase 6: Pending (Example Agents & MVP Test)
