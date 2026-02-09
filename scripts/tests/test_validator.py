@@ -153,6 +153,7 @@ class TestValidatorFileInput:
                 ["python3", "validate-bead-schema.py", temp_path],
                 capture_output=True,
                 text=True,
+                encoding='utf-8',
             )
             assert result.returncode == 0
             assert "✓ Valid bead" in result.stdout
@@ -172,6 +173,7 @@ class TestValidatorFileInput:
                 ["python3", "validate-bead-schema.py", temp_path],
                 capture_output=True,
                 text=True,
+                encoding='utf-8',
             )
             assert result.returncode == 0
             assert "✓ Valid bead" in result.stdout
@@ -192,6 +194,7 @@ class TestValidatorFileInput:
                 ["python3", "validate-bead-schema.py", temp_path],
                 capture_output=True,
                 text=True,
+                encoding='utf-8',
             )
             assert result.returncode == 1
             assert "Validation errors:" in result.stderr
@@ -213,6 +216,7 @@ class TestValidatorFileInput:
                 ["python3", "validate-bead-schema.py", temp_path],
                 capture_output=True,
                 text=True,
+                encoding='utf-8',
             )
             assert result.returncode == 1
             assert "Validation errors:" in result.stderr
@@ -234,6 +238,7 @@ class TestValidatorFileInput:
                 ["python3", "validate-bead-schema.py", temp_path],
                 capture_output=True,
                 text=True,
+                encoding='utf-8',
             )
             assert result.returncode == 1
             assert "Validation errors:" in result.stderr
@@ -255,6 +260,7 @@ class TestValidatorFileInput:
                 ["python3", "validate-bead-schema.py", temp_path],
                 capture_output=True,
                 text=True,
+                encoding='utf-8',
             )
             assert result.returncode == 1
             assert "Validation errors:" in result.stderr
@@ -276,6 +282,7 @@ class TestValidatorFileInput:
                 ["python3", "validate-bead-schema.py", temp_path],
                 capture_output=True,
                 text=True,
+                encoding='utf-8',
             )
             assert result.returncode == 1
             assert "Validation errors:" in result.stderr
@@ -302,6 +309,7 @@ class TestValidatorFileInput:
                 ["python3", "validate-bead-schema.py", temp_path],
                 capture_output=True,
                 text=True,
+                encoding='utf-8',
             )
             assert result.returncode == 1
             assert "Validation errors:" in result.stderr
@@ -315,6 +323,7 @@ class TestValidatorFileInput:
             ["python3", "validate-bead-schema.py", "/nonexistent/file.json"],
             capture_output=True,
             text=True,
+            encoding='utf-8',
         )
         assert result.returncode == 1
         assert "Error:" in result.stderr
@@ -333,6 +342,7 @@ class TestValidatorStdinInput:
             input=json_str,
             capture_output=True,
             text=True,
+            encoding='utf-8',
         )
         assert result.returncode == 0
         assert "✓ Valid bead" in result.stdout
@@ -349,6 +359,7 @@ class TestValidatorStdinInput:
             input=json_str,
             capture_output=True,
             text=True,
+            encoding='utf-8',
         )
         assert result.returncode == 1
         assert "Validation errors:" in result.stderr
@@ -370,6 +381,7 @@ class TestValidatorErrorMessages:
             input=json_str,
             capture_output=True,
             text=True,
+            encoding='utf-8',
         )
         assert result.returncode == 1
         assert "metadata.dev_model" in result.stderr
@@ -388,6 +400,7 @@ class TestValidatorErrorMessages:
             input=json_str,
             capture_output=True,
             text=True,
+            encoding='utf-8',
         )
         assert result.returncode == 1
         # All errors should be reported
