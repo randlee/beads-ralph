@@ -8,6 +8,11 @@ description: Executes formula pours or wisps to create beads in the Dolt databas
 
 ## Purpose
 
+## See Also
+
+- [Agent Architecture Documentation](../../docs/agent-architecture.md) - Extensible agent design patterns
+
+
 Pour formulas into the database to create beads. Supports dry-run, wisp (ephemeral) pours, and full pours via `bd mol pour` and `bd mol wisp`.
 
 ## Inputs

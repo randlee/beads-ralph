@@ -133,13 +133,13 @@ All agents in beads-ralph, their roles, and requirements.
 
 ### Production Agents
 
-| Agent | Version | Role | Template | Requirements |
-|-------|---------|------|----------|--------------|
-| **beads-mason** | 2.0.0 | Build beads from plans | No | [beads-mason-requirements.txt](../.claude/agents/beads-mason-requirements.txt) |
-| **beads-alchemist** | 1.0.0 | Design formula templates | No | (in agent definition) |
-| **beads-smelter** | 1.0.0 | Pour formulas to create beads | No | (in agent definition) |
-| **beads-scribe** | 1.0.0 | Maintain record-keeping | **Yes** | [beads-scribe-requirements.txt](../.claude/agents/beads-scribe-requirements.txt) |
-| **beads-research-expert** | 1.0.0 | Review beads work | No | (in agent definition) |
+| Agent | Version | Role | Template | Deliverable | Requirements |
+|-------|---------|------|----------|-------------|--------------|
+| **beads-mason** | 2.0.0 | Build beads from plans | No | Yes | [beads-mason-requirements.txt](../.claude/agents/beads-mason-requirements.txt) |
+| **beads-alchemist** | 1.0.0 | Design formula templates | No | Yes | (in agent definition) |
+| **beads-smelter** | 1.0.0 | Pour formulas to create beads | No | Yes | (in agent definition) |
+| **beads-scribe** | 1.0.0 | Maintain record-keeping | **Yes** | Yes | [beads-scribe-requirements.txt](../.claude/agents/beads-scribe-requirements.txt) |
+| **beads-research-expert** | 1.0.0 | System design Q&A | No | **No** (local) | (in agent definition) |
 
 ### Planned Agents (Future Phases)
 
@@ -162,10 +162,10 @@ Skills orchestrate agents and provide user-facing workflows.
 
 ### Production Skills
 
-| Skill | Role | Delegates To | Requirements |
-|-------|------|--------------|--------------|
-| **beads-chronicler** | Process plan → create beads/convoys | mason, smelter, scribe | (TBD after rename) |
-| **beads-alchemy** | Design and test formula templates | alchemist, smelter | (in skill definition) |
+| Skill | Role | Delegates To | Deliverable | Requirements |
+|-------|------|--------------|-------------|--------------|
+| **beads-chronicler** | Chronicle plan → beads/convoys/annotations | mason, smelter, scribe | Yes | (in skill definition) |
+| **beads-alchemy** | Design and test formula templates | alchemist, smelter | Yes | (in skill definition) |
 
 ### Planned Skills (Future Phases)
 

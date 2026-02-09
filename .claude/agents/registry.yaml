@@ -2,12 +2,33 @@ agents:
   beads-mason:
     version: 2.0.0
     path: .claude/agents/beads-mason.md
+    deliverable: true
   beads-alchemist:
     version: 1.0.0
     path: .claude/agents/beads-alchemist.md
+    deliverable: true
   beads-smelter:
     version: 1.0.0
     path: .claude/agents/beads-smelter.md
+    deliverable: true
+  beads-scribe:
+    version: 1.0.0
+    path: .claude/agents/beads-scribe-requirements.txt
+    deliverable: true
+    status: requirements
   beads-research-expert:
     version: 1.0.0
     path: .claude/agents/beads-research-expert.md
+    deliverable: false
+    local_only: true
+    description: Local development agent for system design questions
+
+skills:
+  beads-chronicler:
+    version: 1.0.0
+    path: .claude/skills/beads-chronicler/SKILL.md
+    deliverable: true
+  beads-alchemy:
+    version: 1.0.0
+    path: .claude/skills/beads-alchemy/SKILL.md
+    deliverable: true
