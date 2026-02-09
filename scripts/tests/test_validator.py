@@ -150,7 +150,7 @@ class TestValidatorFileInput:
 
         try:
             result = subprocess.run(
-                ["python3", "scripts/validate-bead-schema.py", temp_path],
+                ["python3", "validate-bead-schema.py", temp_path],
                 capture_output=True,
                 text=True,
             )
@@ -169,7 +169,7 @@ class TestValidatorFileInput:
 
         try:
             result = subprocess.run(
-                ["python3", "scripts/validate-bead-schema.py", temp_path],
+                ["python3", "validate-bead-schema.py", temp_path],
                 capture_output=True,
                 text=True,
             )
@@ -189,7 +189,7 @@ class TestValidatorFileInput:
 
         try:
             result = subprocess.run(
-                ["python3", "scripts/validate-bead-schema.py", temp_path],
+                ["python3", "validate-bead-schema.py", temp_path],
                 capture_output=True,
                 text=True,
             )
@@ -210,7 +210,7 @@ class TestValidatorFileInput:
 
         try:
             result = subprocess.run(
-                ["python3", "scripts/validate-bead-schema.py", temp_path],
+                ["python3", "validate-bead-schema.py", temp_path],
                 capture_output=True,
                 text=True,
             )
@@ -231,7 +231,7 @@ class TestValidatorFileInput:
 
         try:
             result = subprocess.run(
-                ["python3", "scripts/validate-bead-schema.py", temp_path],
+                ["python3", "validate-bead-schema.py", temp_path],
                 capture_output=True,
                 text=True,
             )
@@ -252,7 +252,7 @@ class TestValidatorFileInput:
 
         try:
             result = subprocess.run(
-                ["python3", "scripts/validate-bead-schema.py", temp_path],
+                ["python3", "validate-bead-schema.py", temp_path],
                 capture_output=True,
                 text=True,
             )
@@ -273,7 +273,7 @@ class TestValidatorFileInput:
 
         try:
             result = subprocess.run(
-                ["python3", "scripts/validate-bead-schema.py", temp_path],
+                ["python3", "validate-bead-schema.py", temp_path],
                 capture_output=True,
                 text=True,
             )
@@ -299,7 +299,7 @@ class TestValidatorFileInput:
 
         try:
             result = subprocess.run(
-                ["python3", "scripts/validate-bead-schema.py", temp_path],
+                ["python3", "validate-bead-schema.py", temp_path],
                 capture_output=True,
                 text=True,
             )
@@ -312,7 +312,7 @@ class TestValidatorFileInput:
     def test_file_not_found(self):
         """Test validator handles file not found error."""
         result = subprocess.run(
-            ["python3", "scripts/validate-bead-schema.py", "/nonexistent/file.json"],
+            ["python3", "validate-bead-schema.py", "/nonexistent/file.json"],
             capture_output=True,
             text=True,
         )
@@ -329,7 +329,7 @@ class TestValidatorStdinInput:
         json_str = json.dumps(bead_json)
 
         result = subprocess.run(
-            ["python3", "scripts/validate-bead-schema.py"],
+            ["python3", "validate-bead-schema.py"],
             input=json_str,
             capture_output=True,
             text=True,
@@ -345,7 +345,7 @@ class TestValidatorStdinInput:
         json_str = json.dumps(bead_json)
 
         result = subprocess.run(
-            ["python3", "scripts/validate-bead-schema.py"],
+            ["python3", "validate-bead-schema.py"],
             input=json_str,
             capture_output=True,
             text=True,
@@ -366,7 +366,7 @@ class TestValidatorErrorMessages:
         json_str = json.dumps(bead_json)
 
         result = subprocess.run(
-            ["python3", "scripts/validate-bead-schema.py"],
+            ["python3", "validate-bead-schema.py"],
             input=json_str,
             capture_output=True,
             text=True,
@@ -384,7 +384,7 @@ class TestValidatorErrorMessages:
         json_str = json.dumps(bead_json)
 
         result = subprocess.run(
-            ["python3", "scripts/validate-bead-schema.py"],
+            ["python3", "validate-bead-schema.py"],
             input=json_str,
             capture_output=True,
             text=True,
