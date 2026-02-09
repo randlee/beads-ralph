@@ -23,6 +23,7 @@ def get_valid_bead_json():
         "dependencies": ["bd-xyz123"],
         "labels": ["phase-01", "sprint-1-2", "backend"],
         "metadata": {
+            "rig": "beads-ralph",
             "worktree_path": "/Users/dev/projects/my-app-worktrees/main/1-2-auth-api",
             "branch": "main/1-2-auth-api",
             "source_branch": "main",
@@ -85,6 +86,7 @@ def get_merge_bead_json():
         "dependencies": ["bd-a1b2c3", "bd-d4e5f6"],
         "labels": ["phase-01", "sprint-1-3", "merge"],
         "metadata": {
+            "rig": "beads-ralph",
             "worktree_path": "/Users/dev/projects/my-app-worktrees/main/1-3-merge",
             "branch": "main/1-3-merge",
             "source_branch": "main",

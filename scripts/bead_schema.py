@@ -215,6 +215,7 @@ class BeadMetadata(BaseModel):
     model_config = ConfigDict(strict=True)
 
     # Work identification
+    rig: str = Field(..., description="Repository identifier (e.g., 'beads-ralph')")
     worktree_path: str = Field(..., description="Absolute path to worktree on disk")
     branch: str = Field(..., description="Branch name for this work")
     source_branch: str = Field(..., description="Branch to create worktree from")

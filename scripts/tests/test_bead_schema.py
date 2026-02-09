@@ -206,6 +206,7 @@ class TestBeadMetadata:
     def test_valid_metadata(self):
         """Test valid metadata."""
         metadata = BeadMetadata(
+            rig="beads-ralph",
             worktree_path="/path/to/worktree",
             branch="main/1-2-auth",
             source_branch="main",
@@ -226,6 +227,7 @@ class TestBeadMetadata:
         """Test invalid phase pattern raises error."""
         with pytest.raises(ValidationError) as exc_info:
             BeadMetadata(
+                rig="beads-ralph",
                 worktree_path="/path/to/worktree",
                 branch="main/1-2-auth",
                 source_branch="main",
@@ -245,6 +247,7 @@ class TestBeadMetadata:
         """Test invalid sprint pattern raises error."""
         with pytest.raises(ValidationError) as exc_info:
             BeadMetadata(
+                rig="beads-ralph",
                 worktree_path="/path/to/worktree",
                 branch="main/1-2-auth",
                 source_branch="main",
@@ -265,6 +268,7 @@ class TestBeadMetadata:
         valid_phases = ["1", "2", "3a", "3b", "12", "3ab"]
         for phase in valid_phases:
             metadata = BeadMetadata(
+                rig="beads-ralph",
                 worktree_path="/path/to/worktree",
                 branch="main/branch",
                 source_branch="main",
@@ -285,6 +289,7 @@ class TestBeadMetadata:
         valid_sprints = ["1.1", "3a.2", "3b.2a", "3b.2b", "12.5c"]
         for sprint in valid_sprints:
             metadata = BeadMetadata(
+                rig="beads-ralph",
                 worktree_path="/path/to/worktree",
                 branch="main/branch",
                 source_branch="main",
@@ -304,6 +309,7 @@ class TestBeadMetadata:
         """Test empty dev_prompts raises error."""
         with pytest.raises(ValidationError) as exc_info:
             BeadMetadata(
+                rig="beads-ralph",
                 worktree_path="/path/to/worktree",
                 branch="main/branch",
                 source_branch="main",
@@ -323,6 +329,7 @@ class TestBeadMetadata:
         """Test empty qa_agents raises error."""
         with pytest.raises(ValidationError) as exc_info:
             BeadMetadata(
+                rig="beads-ralph",
                 worktree_path="/path/to/worktree",
                 branch="main/branch",
                 source_branch="main",
@@ -345,6 +352,7 @@ class TestBead:
     def get_valid_metadata(self):
         """Helper to create valid metadata."""
         return BeadMetadata(
+            rig="beads-ralph",
             worktree_path="/path/to/worktree",
             branch="main/1-2-auth",
             source_branch="main",

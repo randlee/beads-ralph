@@ -15,6 +15,7 @@
   "updated_at": "2026-02-08T15:00:00Z",
   "closed_at": null,
   "metadata": {
+    "rig": "beads-ralph",
     "worktree_path": "/Users/randlee/Documents/github/beads-ralph-worktrees/feature/1-2a-work-bead",
     "branch": "feature/1-2a-work-bead",
     "source_branch": "develop",

@@ -56,6 +56,7 @@ All beads-ralph-specific fields are stored in the `Metadata` JSON object:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
+| `rig` | string | Yes | Repository identifier (rig name, e.g., "beads-ralph") |
 | `worktree_path` | string | Yes | Absolute path to worktree on disk |
 | `branch` | string | Yes | Branch name for this work |
 | `source_branch` | string | Yes | Branch to create worktree from (e.g., "main") |
@@ -261,6 +262,7 @@ The **beads-architect agent** is responsible for parsing phase/sprint numbers an
   "dependencies": ["bd-xyz123"],
   "labels": ["phase-01", "sprint-1-2", "backend"],
   "metadata": {
+    "rig": "beads-ralph",
     "worktree_path": "/Users/dev/projects/my-app-worktrees/main/1-2-auth-api",
     "branch": "main/1-2-auth-api",
     "source_branch": "main",
@@ -347,6 +349,7 @@ The **beads-architect agent** is responsible for parsing phase/sprint numbers an
   "dependencies": ["bd-a1b2c3", "bd-d4e5f6"],
   "labels": ["phase-01", "sprint-1-3", "merge"],
   "metadata": {
+    "rig": "beads-ralph",
     "worktree_path": "/Users/dev/projects/my-app-worktrees/main/1-3-merge",
     "branch": "main/1-3-merge",
     "source_branch": "main",
@@ -566,6 +569,7 @@ Example of a completed bead showing populated execution tracking fields:
   "status": "closed",
   "closed_at": "2026-02-07T10:45:00Z",
   "metadata": {
+    "rig": "beads-ralph",
     "sprint": "1.2",
     "attempt_count": 2,
     "scrum_master_session_id": "claude-sm-session-xyz789",
