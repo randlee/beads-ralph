@@ -174,29 +174,43 @@ This plan implements beads-ralph MVP using the system itself (dogfooding). Each 
 
 **Dev Agents**:
 - `markdown-doc-writer` (sonnet)
+- `python-backend-dev` (sonnet) - CI/CD setup
 
 **QA Agents**:
 - `qa-schema-validator` (haiku) - Test all examples
+- `qa-python-tests` (haiku) - Verify CI test execution
 - `beads-schema-expert` (opus) - Final schema review
 - `qa-code-review` (opus) - Review documentation completeness
 
 **Tasks**:
-- [ ] Merge any conflicts from 1.2a and 1.2b
+- [ ] Merge any conflicts from 1.2a and 1.2b (already merged ✅)
 - [ ] Create `scripts/README.md` documenting validator usage
 - [ ] Add validation examples to documentation
 - [ ] Run validator against all example beads
 - [ ] Update root README.md with validation instructions
+- [ ] Create `.github/workflows/python-tests.yml` for CI/CD
+  - Matrix build: Python 3.9, 3.10, 3.11, 3.12
+  - Operating systems: Ubuntu (linux), macOS, Windows
+  - Run pytest with coverage reporting
+  - Install dependencies from scripts/requirements.txt
+  - Fail PR if tests fail or coverage drops below 90%
+  - Run on: pull_request (all PRs to develop)
+  - Run on: push to develop branch
 
 **Acceptance Criteria**:
 - All example beads validate successfully
 - Documentation is clear and complete
 - No merge conflicts remaining
 - Validator is ready for use in Phase 2
+- CI/CD pipeline runs on every PR
+- Tests execute successfully on Mac/Windows/Linux
+- Coverage reports generated and enforced (>90%)
+- GitHub Actions workflow triggers automatically
 
 **Agent-Teams Review**:
-- Document: Merge process experience
-- Note: Any conflicts, how resolved
-- Lessons: Merge strategy effectiveness
+- Document: CI/CD setup experience
+- Note: Any platform-specific test issues
+- Lessons: GitHub Actions configuration effectiveness
 
 ---
 
