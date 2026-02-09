@@ -26,6 +26,64 @@ beads-ralph converts complete implementation plans into executable beads (work i
 - **CI/CD Integration**: Automated testing across Mac/Windows/Linux
 - **Agent Coordination**: Multi-agent orchestration via Go loop
 
+## Setup
+
+### Automated Setup (Recommended)
+
+Run the setup script to install all dependencies:
+
+```bash
+./scripts/setup-beads.sh
+```
+
+**What it installs:**
+- ✅ **Dolt** (v1.81+) - Version-controlled SQL database
+- ✅ **bd CLI** (v0.49.4+) - beads command-line interface
+- ✅ **Python deps** - pydantic, pytest, coverage
+- ✅ **Database** - Initializes `.beads/` directory
+
+**For DoltHub remote access** (optional):
+```bash
+# Create token at: https://www.dolthub.com/settings/tokens
+export DOLT_REMOTE_PASSWORD='your-dolthub-api-token'
+```
+
+### Manual Setup
+
+**Prerequisites:**
+- Go 1.21+ (for building bd with CGO/Dolt support)
+- Python 3.9+
+- Homebrew (macOS) or equivalent package manager
+
+**Install Dolt:**
+```bash
+# macOS
+brew install dolt
+
+# Or direct install
+curl -L https://github.com/dolthub/dolt/releases/latest/download/install.sh | bash
+```
+
+**Install bd CLI:**
+```bash
+# Build from source (required for Dolt backend support)
+cd /path/to/beads
+CGO_ENABLED=1 go build -o ~/bin/bd ./cmd/bd
+
+# Add to PATH
+export PATH="$HOME/bin:$PATH"
+
+# Verify
+bd version
+```
+
+**Initialize beads database:**
+```bash
+cd beads-ralph
+bd init
+bd info --json  # Verify database accessible
+```
+
 ## Quick Start
 
 ### Validating Bead Files
