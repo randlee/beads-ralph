@@ -8,6 +8,13 @@ from pydantic import ValidationError
 
 from bead_schema import Bead
 
+# Ensure stdout/stderr use UTF-8 encoding for cross-platform compatibility
+# This fixes Windows console encoding issues with Unicode characters
+if sys.stdout.encoding != 'utf-8':
+    sys.stdout.reconfigure(encoding='utf-8')
+if sys.stderr.encoding != 'utf-8':
+    sys.stderr.reconfigure(encoding='utf-8')
+
 
 def format_validation_errors(exc: ValidationError) -> str:
     """Format pydantic validation errors nicely with field paths."""

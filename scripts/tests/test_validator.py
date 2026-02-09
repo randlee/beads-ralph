@@ -150,9 +150,10 @@ class TestValidatorFileInput:
 
         try:
             result = subprocess.run(
-                ["python3", "scripts/validate-bead-schema.py", temp_path],
+                ["python3", "validate-bead-schema.py", temp_path],
                 capture_output=True,
                 text=True,
+                encoding='utf-8',
             )
             assert result.returncode == 0
             assert "✓ Valid bead" in result.stdout
@@ -169,9 +170,10 @@ class TestValidatorFileInput:
 
         try:
             result = subprocess.run(
-                ["python3", "scripts/validate-bead-schema.py", temp_path],
+                ["python3", "validate-bead-schema.py", temp_path],
                 capture_output=True,
                 text=True,
+                encoding='utf-8',
             )
             assert result.returncode == 0
             assert "✓ Valid bead" in result.stdout
@@ -189,9 +191,10 @@ class TestValidatorFileInput:
 
         try:
             result = subprocess.run(
-                ["python3", "scripts/validate-bead-schema.py", temp_path],
+                ["python3", "validate-bead-schema.py", temp_path],
                 capture_output=True,
                 text=True,
+                encoding='utf-8',
             )
             assert result.returncode == 1
             assert "Validation errors:" in result.stderr
@@ -210,9 +213,10 @@ class TestValidatorFileInput:
 
         try:
             result = subprocess.run(
-                ["python3", "scripts/validate-bead-schema.py", temp_path],
+                ["python3", "validate-bead-schema.py", temp_path],
                 capture_output=True,
                 text=True,
+                encoding='utf-8',
             )
             assert result.returncode == 1
             assert "Validation errors:" in result.stderr
@@ -231,9 +235,10 @@ class TestValidatorFileInput:
 
         try:
             result = subprocess.run(
-                ["python3", "scripts/validate-bead-schema.py", temp_path],
+                ["python3", "validate-bead-schema.py", temp_path],
                 capture_output=True,
                 text=True,
+                encoding='utf-8',
             )
             assert result.returncode == 1
             assert "Validation errors:" in result.stderr
@@ -252,9 +257,10 @@ class TestValidatorFileInput:
 
         try:
             result = subprocess.run(
-                ["python3", "scripts/validate-bead-schema.py", temp_path],
+                ["python3", "validate-bead-schema.py", temp_path],
                 capture_output=True,
                 text=True,
+                encoding='utf-8',
             )
             assert result.returncode == 1
             assert "Validation errors:" in result.stderr
@@ -273,9 +279,10 @@ class TestValidatorFileInput:
 
         try:
             result = subprocess.run(
-                ["python3", "scripts/validate-bead-schema.py", temp_path],
+                ["python3", "validate-bead-schema.py", temp_path],
                 capture_output=True,
                 text=True,
+                encoding='utf-8',
             )
             assert result.returncode == 1
             assert "Validation errors:" in result.stderr
@@ -299,9 +306,10 @@ class TestValidatorFileInput:
 
         try:
             result = subprocess.run(
-                ["python3", "scripts/validate-bead-schema.py", temp_path],
+                ["python3", "validate-bead-schema.py", temp_path],
                 capture_output=True,
                 text=True,
+                encoding='utf-8',
             )
             assert result.returncode == 1
             assert "Validation errors:" in result.stderr
@@ -312,9 +320,10 @@ class TestValidatorFileInput:
     def test_file_not_found(self):
         """Test validator handles file not found error."""
         result = subprocess.run(
-            ["python3", "scripts/validate-bead-schema.py", "/nonexistent/file.json"],
+            ["python3", "validate-bead-schema.py", "/nonexistent/file.json"],
             capture_output=True,
             text=True,
+            encoding='utf-8',
         )
         assert result.returncode == 1
         assert "Error:" in result.stderr
@@ -329,10 +338,11 @@ class TestValidatorStdinInput:
         json_str = json.dumps(bead_json)
 
         result = subprocess.run(
-            ["python3", "scripts/validate-bead-schema.py"],
+            ["python3", "validate-bead-schema.py"],
             input=json_str,
             capture_output=True,
             text=True,
+            encoding='utf-8',
         )
         assert result.returncode == 0
         assert "✓ Valid bead" in result.stdout
@@ -345,10 +355,11 @@ class TestValidatorStdinInput:
         json_str = json.dumps(bead_json)
 
         result = subprocess.run(
-            ["python3", "scripts/validate-bead-schema.py"],
+            ["python3", "validate-bead-schema.py"],
             input=json_str,
             capture_output=True,
             text=True,
+            encoding='utf-8',
         )
         assert result.returncode == 1
         assert "Validation errors:" in result.stderr
@@ -366,10 +377,11 @@ class TestValidatorErrorMessages:
         json_str = json.dumps(bead_json)
 
         result = subprocess.run(
-            ["python3", "scripts/validate-bead-schema.py"],
+            ["python3", "validate-bead-schema.py"],
             input=json_str,
             capture_output=True,
             text=True,
+            encoding='utf-8',
         )
         assert result.returncode == 1
         assert "metadata.dev_model" in result.stderr
@@ -384,10 +396,11 @@ class TestValidatorErrorMessages:
         json_str = json.dumps(bead_json)
 
         result = subprocess.run(
-            ["python3", "scripts/validate-bead-schema.py"],
+            ["python3", "validate-bead-schema.py"],
             input=json_str,
             capture_output=True,
             text=True,
+            encoding='utf-8',
         )
         assert result.returncode == 1
         # All errors should be reported

@@ -1,154 +1,101 @@
-# beads-ralph Schema Validation
+# Bead Schema Validation
 
-Python-based schema validation for beads-ralph using Pydantic v2.
+Python tools for validating bead JSON files against the beads-ralph schema.
 
 ## Overview
 
-This directory contains:
+This directory contains the schema validation system for beads-ralph:
 
-- `bead_schema.py` - Pydantic models for beads-ralph schema
-- `validate-bead-schema.py` - CLI tool to validate bead JSON files
-- `requirements.txt` - Python dependencies
-- `tests/` - Unit tests with >90% coverage
+- **`bead_schema.py`** - Pydantic v2 models defining the complete bead schema
+- **`validate-bead-schema.py`** - CLI tool for validating bead JSON files
+- **`requirements.txt`** - Python dependencies
+- **`tests/`** - Comprehensive test suite with >90% coverage
 
 ## Installation
 
-```bash
-# Create virtual environment
-python3 -m venv .venv
-source .venv/bin/activate
+### Requirements
 
+- Python 3.9 or higher
+- pip package manager
+
+### Setup
+
+```bash
 # Install dependencies
+cd scripts
 pip install -r requirements.txt
 ```
 
 ## Usage
 
-### Validate from file
+### Validating Bead Files
 
+**Basic validation:**
 ```bash
-PYTHONPATH=scripts python3 scripts/validate-bead-schema.py path/to/bead.json
+python3 validate-bead-schema.py examples/example-work-bead.json
 ```
 
-### Validate from stdin
-
+**Validate from stdin:**
 ```bash
-cat bead.json | PYTHONPATH=scripts python3 scripts/validate-bead-schema.py
+cat examples/example-work-bead.json | python3 validate-bead-schema.py
 ```
 
-### Exit codes
+**Exit codes:**
+- `0` - Validation successful
+- `1` - Validation failed (with error details)
 
-- `0` - Valid bead
-- `1` - Invalid bead (validation errors printed to stderr)
+### Example Output
 
-## Testing
-
-Run all tests with coverage:
-
-```bash
-source .venv/bin/activate
-PYTHONPATH=scripts pytest scripts/tests/ -v --cov=scripts --cov-report=term-missing
+**Valid bead:**
+```
+$ python3 validate-bead-schema.py examples/example-work-bead.json
+✓ Valid bead
 ```
 
-## Schema Coverage
+**Invalid bead:**
+```
+$ python3 validate-bead-schema.py invalid-bead.json
+✗ Validation failed:
 
-The validator enforces all rules from `docs/schema.md`:
+metadata.phase
+  String should match pattern '^[0-9]+[a-z]*$'
+```
 
-### Core Bead Fields
-- `title` - Non-empty string
-- `status` - One of: open, in_progress, closed, blocked
-- `priority` - Integer 0-4
-- `issue_type` - One of: beads-ralph-work, beads-ralph-merge
-- `assignee` - Must be "beads-ralph-scrum-master"
+## Running Tests
 
-### Metadata Fields
-- `phase` - Pattern: `^[0-9]+[a-z]*$` (e.g., "1", "3a", "3ab")
-- `sprint` - Pattern: `^[0-9]+[a-z]*\.[0-9]+[a-z]*$` (e.g., "1.2", "3a.2b")
-- `dev_model` - One of: sonnet, opus, haiku
-- `dev_prompts` - Non-empty array of strings
-- `qa_agents` - Non-empty array of QAAgent objects
+### Full Test Suite
 
-### QA Agent Validation
-- Each QA agent must have: `agent_path`, `model`, `prompt`, `output_schema`
-- `output_schema` must define `status` field with enum ["pass", "fail", "stop"]
-- `output_schema` must define `message` field
-- `model` must be one of: sonnet, opus, haiku
+```bash
+cd scripts
+pytest tests/ -v
+```
 
-### Execution Tracking
-- `DevExecution` - Validates attempt numbers, status, model
-- `QAExecution` - Validates QA status, attempt numbers
-- `ScrumResult` - Validates final result structure
+### With Coverage Report
+
+```bash
+pytest tests/ --cov=. --cov-report=term-missing
+```
+
+**Expected Coverage**: >90% (95% on bead_schema.py, 89% overall)
+
+## CI/CD Integration
+
+Tests run automatically on every PR via GitHub Actions:
+- **Platforms**: Ubuntu (Linux), macOS, Windows
+- **Python versions**: 3.9, 3.10, 3.11, 3.12
+- **Coverage threshold**: 90% (PRs fail if below)
+- **Trigger**: All PRs to `develop` branch
+
+See [`.github/workflows/python-tests.yml`](../.github/workflows/python-tests.yml) for workflow configuration.
 
 ## Examples
 
-### Valid Bead
+See [`examples/`](../examples/) directory for complete bead examples:
+- `example-work-bead.json` - Work bead with all required fields
+- `example-merge-bead.json` - Merge bead demonstrating parallel sprint integration
 
-```json
-{
-  "id": "bd-a1b2c3",
-  "title": "Implement user authentication API",
-  "description": "Create auth endpoints",
-  "status": "open",
-  "priority": 1,
-  "issue_type": "beads-ralph-work",
-  "assignee": "beads-ralph-scrum-master",
-  "metadata": {
-    "worktree_path": "/path/to/worktree",
-    "branch": "main/1-2-auth",
-    "source_branch": "main",
-    "phase": "1",
-    "sprint": "1.2",
-    "plan_file": "plans/feature.md",
-    "plan_section": "## Phase 1",
-    "plan_sprint_id": "1.2",
-    "dev_agent_path": ".claude/agents/backend-dev",
-    "dev_model": "sonnet",
-    "dev_prompts": ["Implement auth API"],
-    "qa_agents": [
-      {
-        "agent_path": ".claude/agents/qa-unit-tests",
-        "model": "haiku",
-        "prompt": "Run pytest",
-        "output_schema": {
-          "type": "object",
-          "properties": {
-            "status": {"enum": ["pass", "fail", "stop"]},
-            "message": {"type": "string"}
-          },
-          "required": ["status", "message"]
-        }
-      }
-    ],
-    "max_retry_attempts": 3,
-    "attempt_count": 0
-  },
-  "created_at": "2026-02-07T10:00:00",
-  "updated_at": "2026-02-07T10:00:00"
-}
-```
+## Resources
 
-### Validation Error Output
-
-```
-Validation errors:
-  title: Value error, title must be non-empty (type=value_error)
-  metadata.phase: Value error, phase must match pattern ^[0-9]+[a-z]*$, got: 1.2 (type=value_error)
-  metadata.sprint: Value error, sprint must match pattern ^[0-9]+[a-z]*\.[0-9]+[a-z]*$, got: 1 (type=value_error)
-  metadata.dev_prompts: Value error, dev_prompts must be non-empty array (type=value_error)
-```
-
-## Integration with beads-ralph
-
-This validator will be used by:
-
-- **beads-architect** - Validate generated beads before storage
-- **scrum-master** - Validate bead updates after dev/QA execution
-- **CI/CD pipeline** - Validate all bead files in repository
-- **Developer tools** - Pre-flight checks before creating beads
-
-## Design Philosophy
-
-- **Strict validation** - Using Pydantic's strict mode to prevent type coercion
-- **Clear error messages** - Field paths and error types for easy debugging
-- **Comprehensive coverage** - All schema rules enforced, >90% test coverage
-- **Easy integration** - Simple CLI interface, JSON input/output
+- [Schema Specification](../docs/schema.md)
+- [Implementation Plan](../pm/2026-02-08-implementation-plan.md)
+- [Architecture Documentation](../docs/architecture.md)

@@ -1,0 +1,17 @@
+[run]
+omit =
+    # Exclude CLI wrapper script - tested via integration tests
+    validate-bead-schema.py
+    # Exclude test files from coverage
+    tests/*
+
+[report]
+exclude_lines =
+    # Exclude standard patterns
+    pragma: no cover
+    def __repr__
+    raise AssertionError
+    raise NotImplementedError
+    if __name__ == .__main__.:
+    if TYPE_CHECKING:
+    @abstractmethod
