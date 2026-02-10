@@ -1,0 +1,84 @@
+name: Go Tests
+
+on:
+  pull_request:
+    branches: [ develop ]
+    paths:
+      - 'src/**'
+      - '.github/workflows/go-tests.yml'
+  push:
+    branches: [ develop ]
+    paths:
+      - 'src/**'
+      - '.github/workflows/go-tests.yml'
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        go-version: ['1.21', '1.22', '1.23']
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go ${{ matrix.go-version }}
+      uses: actions/setup-go@v5
+      with:
+        go-version: ${{ matrix.go-version }}
+
+    - name: Verify Go installation
+      run: go version
+
+    - name: Download dependencies
+      working-directory: ./src
+      run: go mod download
+
+    - name: Verify dependencies
+      working-directory: ./src
+      run: go mod verify
+
+    - name: Build
+      working-directory: ./src
+      run: go build -v ./...
+
+    - name: Run tests
+      working-directory: ./src
+      run: go test -v -race -coverprofile=coverage.out ./...
+
+    - name: Check test coverage
+      working-directory: ./src
+      run: |
+        go tool cover -func=coverage.out
+        # Calculate coverage percentage (fail if below 30% for now, increase later)
+        total=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | sed 's/%//')
+        if [ -n "$total" ] && [ $(echo "$total < 30" | bc -l) -eq 1 ]; then
+          echo "Coverage is below 30%: $total%"
+          exit 1
+        fi
+      shell: bash
+
+    - name: Upload coverage to Codecov
+      if: matrix.os == 'ubuntu-latest' && matrix.go-version == '1.23'
+      uses: codecov/codecov-action@v4
+      with:
+        file: ./src/coverage.out
+        fail_ci_if_error: false
+        token: ${{ secrets.CODECOV_TOKEN }}
+
+    - name: Run go vet
+      working-directory: ./src
+      run: go vet ./...
+
+    - name: Check formatting
+      working-directory: ./src
+      run: |
+        if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then
+          echo "The following files need formatting:"
+          gofmt -s -l .
+          exit 1
+        fi
+      shell: bash
