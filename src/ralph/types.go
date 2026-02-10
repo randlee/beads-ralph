@@ -22,6 +22,29 @@ type Bead struct {
 	Metadata     BeadMetadata `json:"metadata"`
 }
 
+// AgentSpec defines how to launch an agent (portable between beads-ralph and gastown)
+type AgentSpec struct {
+	// Role: System integration pattern (gastown compatibility)
+	Role string `json:"role" yaml:"role"` // "polecat", "witness", "mayor"
+
+	// Agent: Behavior implementation (prompt file)
+	Agent string `json:"agent" yaml:"agent"` // ".claude/agents/scrum-master.md"
+
+	// Model selection (follows 4-level resolution priority)
+	Model string `json:"model,omitempty" yaml:"model,omitempty"` // "opus", "sonnet", "haiku"
+
+	// Execution configuration (use system defaults if empty)
+	Executable string   `json:"executable,omitempty" yaml:"executable,omitempty"` // "claude"
+	Options    []string `json:"options,omitempty" yaml:"options,omitempty"`       // CLI flags
+
+	// Context & resurrection
+	Context string `json:"context,omitempty" yaml:"context,omitempty"`   // Context description
+	AgentID string `json:"agent_id,omitempty" yaml:"agent_id,omitempty"` // For session resume
+
+	// Environment variables
+	Env map[string]string `json:"env,omitempty" yaml:"env,omitempty"` // Additional env vars
+}
+
 // BeadMetadata contains beads-ralph-specific extended fields
 type BeadMetadata struct {
 	// Work identification
@@ -41,13 +64,15 @@ type BeadMetadata struct {
 	// Merge bead fields (nullable for work beads)
 	BranchesToMerge []string `json:"branches_to_merge,omitempty"`
 
-	// Dev agent configuration
-	DevAgentPath string   `json:"dev_agent_path"`
-	DevModel     string   `json:"dev_model"`
-	DevPrompts   []string `json:"dev_prompts"`
+	// Agent specifications (gastown-compatible)
+	ScrumMasterAgent AgentSpec   `json:"scrum_master_agent"`          // Orchestrator (role: polecat)
+	DevAgents        []AgentSpec `json:"dev_agents"`                  // Developer agents (role: polecat)
+	QAAgents         []AgentSpec `json:"qa_agents"`                   // QA validators (role: polecat)
 
-	// QA agent configuration
-	QAAgents []QAAgent `json:"qa_agents"`
+	// Legacy dev/QA fields (DEPRECATED - use AgentSpec instead)
+	DevAgentPath string   `json:"dev_agent_path,omitempty"` // Deprecated: use DevAgents[0].Agent
+	DevModel     string   `json:"dev_model,omitempty"`      // Deprecated: use DevAgents[0].Model
+	DevPrompts   []string `json:"dev_prompts,omitempty"`    // Deprecated: use DevAgents[0].Context
 
 	// Retry configuration
 	MaxRetryAttempts int `json:"max_retry_attempts"`
@@ -65,7 +90,8 @@ type BeadMetadata struct {
 	ScrumResult  *ScrumResult `json:"scrum_result,omitempty"`
 }
 
-// QAAgent represents a QA agent configuration
+// QAAgent represents a QA agent configuration (DEPRECATED - use AgentSpec instead)
+// Kept for backward compatibility with existing beads
 type QAAgent struct {
 	AgentPath    string                 `json:"agent_path"`
 	Model        string                 `json:"model"`
@@ -135,7 +161,18 @@ type Config struct {
 	CheckBeforeStart  bool `yaml:"check_before_start"`
 
 	// Network settings
-	MaxNetworkRetries int    `yaml:"max_network_retries"`
-	RetryBackoff      string `yaml:"retry_backoff"`
+	MaxNetworkRetries int           `yaml:"max_network_retries"`
+	RetryBackoff      string        `yaml:"retry_backoff"`
 	NetworkTimeout    time.Duration `yaml:"network_timeout"`
+
+	// Agent defaults (gastown-compatible)
+	AgentDefaults AgentDefaults `yaml:"agent_defaults"`
+}
+
+// AgentDefaults defines system-wide agent execution defaults
+type AgentDefaults struct {
+	DefaultModel      string            `yaml:"default_model"`      // "sonnet" (fallback if not specified)
+	DefaultExecutable string            `yaml:"default_executable"` // "claude"
+	DefaultOptions    []string          `yaml:"default_options"`    // ["--dangerously-skip-permissions", "--output-format", "json"]
+	RoleModels        map[string]string `yaml:"role_models"`        // Role-based model selection (gastown-style)
 }
