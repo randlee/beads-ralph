@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -24,7 +25,8 @@ func TestExecuteClaimSuccess(t *testing.T) {
 	// Override PATH to use mock
 	origPath := os.Getenv("PATH")
 	defer os.Setenv("PATH", origPath)
-	os.Setenv("PATH", filepath.Dir(mockBd)+":"+origPath)
+	pathSep := getPathSeparator()
+	os.Setenv("PATH", filepath.Dir(mockBd)+pathSep+origPath)
 
 	ctx := context.Background()
 	err := executeClaim(ctx, "test-bead-1")
@@ -78,7 +80,8 @@ func TestExecuteClaimAlreadyClaimed(t *testing.T) {
 
 			origPath := os.Getenv("PATH")
 			defer os.Setenv("PATH", origPath)
-			os.Setenv("PATH", filepath.Dir(mockBd)+":"+origPath)
+			pathSep := getPathSeparator()
+			os.Setenv("PATH", filepath.Dir(mockBd)+pathSep+origPath)
 
 			ctx := context.Background()
 			err := executeClaim(ctx, "test-bead-1")
@@ -128,7 +131,8 @@ func TestExecuteClaimOtherErrors(t *testing.T) {
 
 			origPath := os.Getenv("PATH")
 			defer os.Setenv("PATH", origPath)
-			os.Setenv("PATH", filepath.Dir(mockBd)+":"+origPath)
+			pathSep := getPathSeparator()
+			os.Setenv("PATH", filepath.Dir(mockBd)+pathSep+origPath)
 
 			ctx := context.Background()
 			err := executeClaim(ctx, "test-bead-1")
@@ -152,7 +156,8 @@ func TestClaimBeadWithRetrySuccess(t *testing.T) {
 	mockBd := createMockBdCommand(t, "claim", 0, "")
 	origPath := os.Getenv("PATH")
 	defer os.Setenv("PATH", origPath)
-	os.Setenv("PATH", filepath.Dir(mockBd)+":"+origPath)
+	pathSep := getPathSeparator()
+	os.Setenv("PATH", filepath.Dir(mockBd)+pathSep+origPath)
 
 	ctx := context.Background()
 	config := ClaimConfig{
@@ -185,7 +190,8 @@ func TestClaimBeadWithRetryAlreadyClaimed(t *testing.T) {
 	mockBd := createMockBdCommand(t, "claim", 2, "already claimed")
 	origPath := os.Getenv("PATH")
 	defer os.Setenv("PATH", origPath)
-	os.Setenv("PATH", filepath.Dir(mockBd)+":"+origPath)
+	pathSep := getPathSeparator()
+	os.Setenv("PATH", filepath.Dir(mockBd)+pathSep+origPath)
 
 	ctx := context.Background()
 	config := ClaimConfig{
@@ -219,7 +225,27 @@ func TestClaimBeadWithRetryExponentialBackoff(t *testing.T) {
 	attemptCount := 0
 	var mu sync.Mutex
 
-	mockBdScript := fmt.Sprintf(`#!/bin/bash
+	countFile := filepath.Join(t.TempDir(), "attempt_count")
+	var mockBdScript string
+
+	if runtime.GOOS == "windows" {
+		mockBdScript = fmt.Sprintf(`@echo off
+set count_file=%s
+set count=0
+if exist "%%count_file%%" (
+    set /p count=<"%%count_file%%"
+)
+set /a count=%%count%% + 1
+echo %%count%%>"%%count_file%%"
+
+if %%count%% LEQ 2 (
+    echo network error 1>&2
+    exit /b 1
+)
+exit /b 0
+`, countFile)
+	} else {
+		mockBdScript = fmt.Sprintf(`#!/bin/bash
 count_file="%s"
 count=0
 if [ -f "$count_file" ]; then
@@ -233,12 +259,14 @@ if [ "$count" -le 2 ]; then
     exit 1
 fi
 exit 0
-`, filepath.Join(t.TempDir(), "attempt_count"))
+`, countFile)
+	}
 
 	mockBd := createMockBdCommandFromScript(t, mockBdScript)
 	origPath := os.Getenv("PATH")
 	defer os.Setenv("PATH", origPath)
-	os.Setenv("PATH", filepath.Dir(mockBd)+":"+origPath)
+	pathSep := getPathSeparator()
+	os.Setenv("PATH", filepath.Dir(mockBd)+pathSep+origPath)
 
 	ctx := context.Background()
 	config := ClaimConfig{
@@ -283,7 +311,8 @@ func TestClaimBeadWithRetryExhaustion(t *testing.T) {
 	mockBd := createMockBdCommand(t, "claim", 1, "network timeout")
 	origPath := os.Getenv("PATH")
 	defer os.Setenv("PATH", origPath)
-	os.Setenv("PATH", filepath.Dir(mockBd)+":"+origPath)
+	pathSep := getPathSeparator()
+	os.Setenv("PATH", filepath.Dir(mockBd)+pathSep+origPath)
 
 	ctx := context.Background()
 	config := ClaimConfig{
@@ -311,14 +340,23 @@ func TestClaimBeadContextCancellation(t *testing.T) {
 	}
 
 	// Mock that takes a long time (never actually completes)
-	mockBdScript := `#!/bin/bash
+	var mockBdScript string
+	if runtime.GOOS == "windows" {
+		mockBdScript = `@echo off
+timeout /t 10 /nobreak >nul
+exit /b 0
+`
+	} else {
+		mockBdScript = `#!/bin/bash
 sleep 10
 exit 0
 `
+	}
 	mockBd := createMockBdCommandFromScript(t, mockBdScript)
 	origPath := os.Getenv("PATH")
 	defer os.Setenv("PATH", origPath)
-	os.Setenv("PATH", filepath.Dir(mockBd)+":"+origPath)
+	pathSep := getPathSeparator()
+	os.Setenv("PATH", filepath.Dir(mockBd)+pathSep+origPath)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
@@ -366,7 +404,26 @@ func TestConcurrentClaimAttempts(t *testing.T) {
 
 	// Create a mock that only succeeds once using an atomic lock file
 	lockFile := filepath.Join(t.TempDir(), "claim_lock")
-	mockBdScript := fmt.Sprintf(`#!/bin/bash
+	var mockBdScript string
+
+	if runtime.GOOS == "windows" {
+		mockBdScript = fmt.Sprintf(`@echo off
+set lockfile=%s
+if not exist "%%lockfile%%" (
+    mkdir "%%lockfile%%" 2>nul
+    if errorlevel 1 (
+        echo already claimed 1>&2
+        exit /b 2
+    )
+    timeout /t 1 /nobreak >nul 2>nul
+    exit /b 0
+) else (
+    echo already claimed 1>&2
+    exit /b 2
+)
+`, lockFile)
+	} else {
+		mockBdScript = fmt.Sprintf(`#!/bin/bash
 lockfile="%s"
 # Use mkdir for atomic operation (not touch which has race conditions)
 if ! mkdir "$lockfile" 2>/dev/null; then
@@ -376,11 +433,13 @@ fi
 sleep 0.01  # Small delay to ensure race detection
 exit 0
 `, lockFile)
+	}
 
 	mockBd := createMockBdCommandFromScript(t, mockBdScript)
 	origPath := os.Getenv("PATH")
 	defer os.Setenv("PATH", origPath)
-	os.Setenv("PATH", filepath.Dir(mockBd)+":"+origPath)
+	pathSep := getPathSeparator()
+	os.Setenv("PATH", filepath.Dir(mockBd)+pathSep+origPath)
 
 	ctx := context.Background()
 	config := DefaultClaimConfig()
@@ -446,26 +505,60 @@ func TestDefaultClaimConfig(t *testing.T) {
 	}
 }
 
+// Helper function to get OS-specific PATH separator
+func getPathSeparator() string {
+	if runtime.GOOS == "windows" {
+		return ";"
+	}
+	return ":"
+}
+
 // Helper function to create a mock bd command that exits with a specific code
 func createMockBdCommand(t *testing.T, subcommand string, exitCode int, stderr string) string {
-	script := fmt.Sprintf(`#!/bin/bash
+	var script string
+
+	if runtime.GOOS == "windows" {
+		// Windows batch script
+		stderrLine := ""
+		if stderr != "" {
+			stderrLine = fmt.Sprintf("echo %s 1>&2\n", stderr)
+		}
+		script = fmt.Sprintf(`@echo off
+if not "%%1"=="%s" (
+    echo unexpected subcommand: %%1 1>&2
+    exit /b 1
+)
+%sexit /b %d
+`, subcommand, stderrLine, exitCode)
+	} else {
+		// Unix bash script
+		stderrLine := ""
+		if stderr != "" {
+			stderrLine = fmt.Sprintf(`    echo "%s" >&2
+`, stderr)
+		}
+		script = fmt.Sprintf(`#!/bin/bash
 if [ "$1" != "%s" ]; then
     echo "unexpected subcommand: $1" >&2
     exit 1
 fi
-if [ "%s" != "" ]; then
-    echo "%s" >&2
-fi
-exit %d
-`, subcommand, stderr, stderr, exitCode)
+%sexit %d
+`, subcommand, stderrLine, exitCode)
+	}
 
 	return createMockBdCommandFromScript(t, script)
 }
 
-// Helper function to create a mock bd command from a bash script
+// Helper function to create a mock bd command from a script
 func createMockBdCommandFromScript(t *testing.T, script string) string {
 	tmpDir := t.TempDir()
-	mockPath := filepath.Join(tmpDir, "bd")
+
+	// Use appropriate file extension based on OS
+	mockName := "bd"
+	if runtime.GOOS == "windows" {
+		mockName = "bd.cmd"
+	}
+	mockPath := filepath.Join(tmpDir, mockName)
 
 	err := os.WriteFile(mockPath, []byte(script), 0755)
 	if err != nil {
