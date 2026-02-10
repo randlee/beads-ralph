@@ -134,14 +134,14 @@ func TestTeamNames(t *testing.T) {
 // Test processResults function
 func TestProcessResults(t *testing.T) {
 	tests := []struct {
-		name              string
-		results           []ScrumResult
-		expectedSuccess   bool
-		expectedFatalErr  bool
+		name             string
+		results          []ScrumResult
+		expectedSuccess  bool
+		expectedFatalErr bool
 	}{
 		{
-			name:             "all successful",
-			results:          []ScrumResult{
+			name: "all successful",
+			results: []ScrumResult{
 				{BeadID: "bd-1", Success: true, PRUrl: "https://github.com/user/repo/pull/1"},
 				{BeadID: "bd-2", Success: true, PRUrl: "https://github.com/user/repo/pull/2"},
 			},
@@ -149,8 +149,8 @@ func TestProcessResults(t *testing.T) {
 			expectedFatalErr: false,
 		},
 		{
-			name:             "all failed",
-			results:          []ScrumResult{
+			name: "all failed",
+			results: []ScrumResult{
 				{BeadID: "bd-1", Success: false, Error: "dev agent failed"},
 				{BeadID: "bd-2", Success: false, Error: "qa validation failed"},
 			},
@@ -158,8 +158,8 @@ func TestProcessResults(t *testing.T) {
 			expectedFatalErr: false,
 		},
 		{
-			name:             "mixed success and failure",
-			results:          []ScrumResult{
+			name: "mixed success and failure",
+			results: []ScrumResult{
 				{BeadID: "bd-1", Success: true, PRUrl: "https://github.com/user/repo/pull/1"},
 				{BeadID: "bd-2", Success: false, Error: "timeout"},
 			},
@@ -167,8 +167,8 @@ func TestProcessResults(t *testing.T) {
 			expectedFatalErr: false,
 		},
 		{
-			name:             "skipped beads",
-			results:          []ScrumResult{
+			name: "skipped beads",
+			results: []ScrumResult{
 				{BeadID: "bd-1", Success: true, PRUrl: "https://github.com/user/repo/pull/1"},
 				{BeadID: "bd-2", Skipped: true},
 			},

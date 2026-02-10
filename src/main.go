@@ -68,8 +68,8 @@ func loadConfig(path string) (ralph.Config, error) {
 			QAAgent     string `yaml:"qa_agent"`
 		} `yaml:"timeouts"`
 		Retry struct {
-			MaxAttempts        int `yaml:"max_attempts"`
-			PRCreationRetries  int `yaml:"pr_creation_retries"`
+			MaxAttempts       int `yaml:"max_attempts"`
+			PRCreationRetries int `yaml:"pr_creation_retries"`
 		} `yaml:"retry"`
 		Worktrees struct {
 			RepoName          string `yaml:"repo_name"`

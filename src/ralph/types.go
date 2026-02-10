@@ -48,26 +48,26 @@ type AgentSpec struct {
 // BeadMetadata contains beads-ralph-specific extended fields
 type BeadMetadata struct {
 	// Work identification
-	Rig           string `json:"rig"`
-	WorktreePath  string `json:"worktree_path"`
-	Branch        string `json:"branch"`
-	SourceBranch  string `json:"source_branch"`
-	Phase         string `json:"phase"`
-	Sprint        string `json:"sprint"`
-	TeamName      string `json:"team_name"` // CRITICAL: Group beads by this field
+	Rig          string `json:"rig"`
+	WorktreePath string `json:"worktree_path"`
+	Branch       string `json:"branch"`
+	SourceBranch string `json:"source_branch"`
+	Phase        string `json:"phase"`
+	Sprint       string `json:"sprint"`
+	TeamName     string `json:"team_name"` // CRITICAL: Group beads by this field
 
 	// Plan tracking
-	PlanFile      string `json:"plan_file"`
-	PlanSection   string `json:"plan_section"`
-	PlanSprintID  string `json:"plan_sprint_id"`
+	PlanFile     string `json:"plan_file"`
+	PlanSection  string `json:"plan_section"`
+	PlanSprintID string `json:"plan_sprint_id"`
 
 	// Merge bead fields (nullable for work beads)
 	BranchesToMerge []string `json:"branches_to_merge,omitempty"`
 
 	// Agent specifications (gastown-compatible)
-	ScrumMasterAgent AgentSpec   `json:"scrum_master_agent"`          // Orchestrator (role: polecat)
-	DevAgents        []AgentSpec `json:"dev_agents"`                  // Developer agents (role: polecat)
-	QAAgents         []AgentSpec `json:"qa_agents"`                   // QA validators (role: polecat)
+	ScrumMasterAgent AgentSpec   `json:"scrum_master_agent"` // Orchestrator (role: polecat)
+	DevAgents        []AgentSpec `json:"dev_agents"`         // Developer agents (role: polecat)
+	QAAgents         []AgentSpec `json:"qa_agents"`          // QA validators (role: polecat)
 
 	// Legacy dev/QA fields (DEPRECATED - use AgentSpec instead)
 	DevAgentPath string   `json:"dev_agent_path,omitempty"` // Deprecated: use DevAgents[0].Agent
@@ -79,15 +79,15 @@ type BeadMetadata struct {
 	AttemptCount     int `json:"attempt_count"`
 
 	// Execution tracking
-	ScrumMasterSessionID string          `json:"scrum_master_session_id,omitempty"`
-	DevAgentSessionID    string          `json:"dev_agent_session_id,omitempty"`
-	DevAgentExecutions   []DevExecution  `json:"dev_agent_executions,omitempty"`
-	QAAgentExecutions    []QAExecution   `json:"qa_agent_executions,omitempty"`
+	ScrumMasterSessionID string         `json:"scrum_master_session_id,omitempty"`
+	DevAgentSessionID    string         `json:"dev_agent_session_id,omitempty"`
+	DevAgentExecutions   []DevExecution `json:"dev_agent_executions,omitempty"`
+	QAAgentExecutions    []QAExecution  `json:"qa_agent_executions,omitempty"`
 
 	// Result tracking
-	PRUrl        string       `json:"pr_url,omitempty"`
-	PRNumber     int          `json:"pr_number,omitempty"`
-	ScrumResult  *ScrumResult `json:"scrum_result,omitempty"`
+	PRUrl       string       `json:"pr_url,omitempty"`
+	PRNumber    int          `json:"pr_number,omitempty"`
+	ScrumResult *ScrumResult `json:"scrum_result,omitempty"`
 }
 
 // QAAgent represents a QA agent configuration (DEPRECATED - use AgentSpec instead)
@@ -148,17 +148,17 @@ type Config struct {
 	QAAgentTimeout     time.Duration `yaml:"qa_agent_timeout"`
 
 	// Retry settings
-	MaxRetryAttempts    int `yaml:"max_retry_attempts"`
-	PRCreationRetries   int `yaml:"pr_creation_retries"`
+	MaxRetryAttempts  int `yaml:"max_retry_attempts"`
+	PRCreationRetries int `yaml:"pr_creation_retries"`
 
 	// Worktree settings
-	RepoName           string `yaml:"repo_name"`
-	SourceBranch       string `yaml:"source_branch"`
-	CleanupOnComplete  bool   `yaml:"cleanup_on_complete"`
+	RepoName          string `yaml:"repo_name"`
+	SourceBranch      string `yaml:"source_branch"`
+	CleanupOnComplete bool   `yaml:"cleanup_on_complete"`
 
 	// Disk space checks
-	MinFreeGB         int  `yaml:"min_free_gb"`
-	CheckBeforeStart  bool `yaml:"check_before_start"`
+	MinFreeGB        int  `yaml:"min_free_gb"`
+	CheckBeforeStart bool `yaml:"check_before_start"`
 
 	// Network settings
 	MaxNetworkRetries int           `yaml:"max_network_retries"`
