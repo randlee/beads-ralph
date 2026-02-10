@@ -1132,15 +1132,67 @@ Features to build using beads-ralph itself:
 - Passes validate-bead-schema.py validation
 - Parallel execution with Sprint 1.2a
 
+### ✅ Sprint 4.1: Go Project Setup & Core Loop Structure
+**Status**: Completed 2026-02-09
+**PR**: #18 (merged to develop)
+**Session ID**: [current session - ARCH-RALPH initialization]
+**Outcome**:
+- Created Go module: `github.com/randlee/beads-ralph`
+- Implemented `src/ralph/loop.go` - Main orchestration loop with team_name grouping
+- Implemented `src/ralph/types.go` - Bead, BeadMetadata, ScrumResult, Config structs
+- Implemented `src/ralph/ready.go` - findReadyBeads(), groupByTeam() functions
+- Comprehensive test suite: 5 test suites, all passing (38.2% coverage)
+- Key design: Group beads by `metadata.team_name` (NOT sprint or branch!)
+
+### ✅ Go Tests CI/CD
+**Status**: Completed 2026-02-09
+**PR**: Committed directly to develop (commit `32f41cb`)
+**Outcome**:
+- Created `.github/workflows/go-tests.yml`
+- Matrix: Go 1.21/1.22/1.23 × Ubuntu/macOS/Windows (9 jobs)
+- Checks: go build, go test -race, go vet, gofmt
+- Coverage threshold: 30% minimum
+- Triggers: PRs and pushes to develop affecting `src/**`
+
+### ✅ Gastown Compatibility Research
+**Status**: Completed 2026-02-09
+**Documentation**: `docs/gastown-compatibility.md` (505 lines)
+**Research Agents**: 2 haiku agents (gastown repo + research docs)
+**Outcome**:
+- Researched gastown's agent launching patterns (polecat/witness/mayor roles)
+- Defined AgentSpec portable schema (role + agent + model + executable + options)
+- Documented role mapping: scrum-master=polecat, scribe=witness, ralph=mayor
+- Model resolution priority: bead → frontmatter → config → default "sonnet"
+- JSON output requirement: `--output-format json` flag (beads-ralph deviation)
+- Integration path: Shared spec → Hybrid execution → Unified orchestration
+
+### ✅ Sprint 4.1a: AgentSpec Types Update
+**Status**: Completed 2026-02-09
+**PR**: [pending - feature/4-1a-agentspec-types]
+**Outcome**:
+- Added `AgentSpec` type to `src/ralph/types.go` with role/agent/model fields
+- Updated `BeadMetadata` to use `AgentSpec` for scrum_master_agent, dev_agents, qa_agents
+- Added `AgentDefaults` to Config (default_model, role_models mapping)
+- Deprecated old dev/QA fields (backward compatible)
+- Gastown-compatible: AgentSpec works in both beads-ralph and gastown
+
 ---
 
-**Plan Status**: Phase 2 Complete, Phase 3 Skipped
-**Next Action**: Phase 4 - Go Ralph Loop (autonomous orchestration)
-**Estimated MVP Completion**: 5 phases (Phase 3 skipped), ~20 sprints remaining
+**Plan Status**: Phase 4 Sprint 4.1 Complete, Sprint 4.1a Complete
+**Next Action**: Phase 4 Sprint 4.2 (Parallel: Claiming, Config, Launcher)
+**Estimated MVP Completion**: 5 phases (Phase 3 skipped), ~18 sprints remaining
 **Progress**:
 - ✅ Phase 1: Complete (4/4 sprints)
 - ✅ Phase 2: Complete (4/4 sprints)
 - ❌ Phase 3: SKIPPED (out of scope)
-- 🔄 Phase 4: Next (Go Ralph Loop)
+- 🔄 Phase 4: In Progress (Sprint 4.1 ✅, Sprint 4.1a ✅, Sprint 4.2 next)
 - ⏳ Phase 5: Pending (Scrum-Master Agent)
 - ⏳ Phase 6: Pending (Example Agents & MVP Test)
+
+**Session Progress** (2026-02-09):
+- ✅ Sprint 4.1 completed and merged (PR #18)
+- ✅ Go tests CI/CD added
+- ✅ Gastown compatibility research completed (2 agents)
+- ✅ AgentSpec design finalized (docs/gastown-compatibility.md)
+- ✅ Sprint 4.1a types update (AgentSpec integration)
+- 🔄 Ready for Sprint 4.2 (parallel: 4.2a claiming, 4.2b config, 4.2c launcher)
