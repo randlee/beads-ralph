@@ -189,10 +189,23 @@ def create_work_bead(sprint):
             "source_branch": sprint.source_branch,
             "phase": sprint.phase,
             "sprint": sprint.sprint,
-            "dev_agent_path": select_dev_agent(sprint),
-            "dev_model": select_model(sprint),
+            "team_name": generate_team_name(sprint),
+            "scrum_master_agent": create_agent_spec(
+                role="polecat",
+                agent=".claude/agents/beads-ralph-scrum-master.md",
+                model=select_model_for_scrum_master(sprint),
+                context=f"Sprint {sprint.sprint} - {sprint.title}"
+            ),
+            "dev_agents": [
+                create_agent_spec(
+                    role="polecat",
+                    agent=select_dev_agent(sprint),
+                    model=select_model_for_dev(sprint),
+                    context=sprint.description
+                )
+            ],
             "dev_prompts": extract_prompts(sprint),
-            "qa_agents": select_qa_agents(sprint),
+            "qa_agents": select_qa_agent_specs(sprint),
             "max_retry_attempts": 3
         }
     }
@@ -449,14 +462,16 @@ func runScrumMaster(ctx context.Context, bead Bead, config Config) ScrumResult {
                          ↓
 ┌─────────────────────────────────────────────────────────┐
 │ 3. Launch Dev Agent                                     │
-│    • Use dev_agent_path from metadata                   │
+│    • Use dev_agents[0] AgentSpec from metadata          │
+│    • Build command using AgentSpec (role, agent, model) │
 │    • Pass dev_prompts from metadata                     │
 │    • Wait for completion                                │
 └─────────────────────────────────────────────────────────┘
                          ↓
 ┌─────────────────────────────────────────────────────────┐
 │ 4. Launch QA Agents (Background)                        │
-│    • For each qa_agent in metadata.qa_agents:           │
+│    • For each AgentSpec in metadata.qa_agents:          │
+│      - Build command using AgentSpec                    │
 │      - Launch as background task                        │
 │      - Pass worktree, branch, changed files as input    │
 │    • Collect all QA results                             │
@@ -533,13 +548,13 @@ return FATAL
   "attempt_count": 2,
   "qa_results": [
     {
-      "agent_path": ".claude/agents/qa-unit-tests",
+      "agent": ".claude/agents/qa-unit-tests.md",
       "status": "pass",
       "message": "All tests passed. Coverage: 85%",
       "details": {"total": 42, "passed": 42, "coverage_percent": 85}
     },
     {
-      "agent_path": ".claude/agents/qa-security-scan",
+      "agent": ".claude/agents/qa-security-scan.md",
       "status": "pass",
       "message": "No vulnerabilities found",
       "details": {"vulnerabilities": []}
