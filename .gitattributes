@@ -1,0 +1,27 @@
+# Force LF line endings for all text files to ensure consistency across platforms
+* text=auto eol=lf
+
+# Ensure Go files always use LF (required for gofmt compatibility on Windows)
+*.go text eol=lf
+*.mod text eol=lf
+*.sum text eol=lf
+
+# Shell scripts must use LF
+*.sh text eol=lf
+
+# Python files should use LF
+*.py text eol=lf
+
+# YAML and JSON should use LF
+*.yaml text eol=lf
+*.yml text eol=lf
+*.json text eol=lf
+*.jsonl text eol=lf
+
+# Markdown files should use LF
+*.md text eol=lf
+
+# Windows-specific files can use CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
