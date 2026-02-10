@@ -134,52 +134,71 @@ Execution:
 
 The **beads-mason agent** is responsible for parsing phase/sprint numbers and generating correct dependency relationships when creating beads.
 
-### Dev Agent Configuration
+### Agent Configuration (AgentSpec)
+
+**As of Sprint 4.1a**, agent configuration uses the unified `AgentSpec` type for all agent roles (scrum-master, dev, QA). This design enables portability with gastown and flexible agent orchestration.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `dev_agent_path` | string | Yes | Path to dev agent (e.g., ".claude/agents/backend-dev") - **MUST exist** in `.claude/agents/` or be default Claude agent |
-| `dev_model` | string | Yes | Model for dev agent ("sonnet", "opus", "haiku") |
-| `dev_prompts` | string[] | Yes | Array of prompts for dev agent |
-| `agent_type` | string | Yes | Agent role: "dev", "qa", "code-review", "merge", "docs" |
+| `scrum_master_agent` | AgentSpec | Yes | Scrum-master agent specification |
+| `dev_agents` | AgentSpec[] | Yes | Array of dev agent specifications (typically one per bead) |
+| `qa_agents` | AgentSpec[] | Yes | Array of QA agent specifications |
+
+**AgentSpec Object Schema**:
+
+```json
+{
+  "role": "string",                    // Role type: "polecat", "witness", "mayor" (gastown compatibility)
+  "agent": "string",                   // Path to agent file (e.g., ".claude/agents/backend-dev.md") - MUST exist
+  "model": "string",                   // Model selection: "sonnet", "opus", "haiku" (optional, uses 4-level resolution)
+  "executable": "string",              // Executable name: "claude" (optional, uses system default)
+  "options": ["string"],               // CLI flags (optional, uses system defaults)
+  "context": "string",                 // Human-readable context for this agent invocation (optional)
+  "agent_id": "string",                // Session ID for agent resurrection (optional, populated at runtime)
+  "env": {                             // Additional environment variables (optional)
+    "VAR_NAME": "value"
+  }
+}
+```
+
+**Required Fields**:
+- `role` - Agent role type (see Role Types below)
+- `agent` - Path to agent markdown file in `.claude/agents/`
+
+**Optional Fields** (use system defaults if omitted):
+- `model` - Model selection (uses 4-level resolution priority if omitted)
+- `executable` - Defaults to "claude"
+- `options` - Defaults to system options (e.g., `["--dangerously-skip-permissions"]`)
+- `context` - Human-readable description of agent's current task
+- `agent_id` - Populated at runtime for session tracking
+- `env` - Additional environment variables for agent execution
+
+**Role Types** (gastown compatibility):
+- `polecat` - Ephemeral worker agent (scrum-master, dev, QA, merge agents)
+- `witness` - Persistent monitoring agent (future: beads-scribe)
+- `mayor` - Top-level orchestrator (future: Ralph coordinator as agent)
+
+**Model Resolution Priority** (4-level hierarchy):
+1. `AgentSpec.model` (explicit override in bead metadata)
+2. Agent YAML frontmatter `recommended_model` (in agent .md file)
+3. System config `default_model` (in beads-ralph.yaml)
+4. Hardcoded default: "sonnet"
 
 **Agent Path Validation**:
-- **At review time**: beads-mason MUST validate that `dev_agent_path` exists in `.claude/agents/` directory
+- **At review time**: beads-mason MUST validate that `agent` path exists in `.claude/agents/` directory
 - **Default agents**: Can use "claude" for default Claude agent (no file required)
 - **Custom agents**: Path must point to existing `.md` file in `.claude/agents/`
 - **Error handling**: Invalid paths should be caught during bead creation, not execution
 
-### QA Agent Configuration
+**QA Agent Output Schema** (returned by QA agents):
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `qa_agents` | QAAgent[] | Yes | Array of QA agent specifications |
-
-**QAAgent Object Schema**:
+QA agents using AgentSpec return structured JSON output with:
 
 ```json
 {
-  "agent_path": "string",      // Path to QA agent (e.g., ".claude/agents/qa-unit-tests") - MUST exist in .claude/agents/
-  "model": "string",           // Model for QA agent ("sonnet", "opus", "haiku")
-  "prompt": "string",          // Prompt for QA agent
-  "agent_type": "string",      // Agent role: "qa", "code-review", "security-scan", etc.
-  "input_schema": {            // JSON Schema for QA input (optional)
-    "type": "object",
-    "properties": {
-      "worktree_path": {"type": "string"},
-      "branch": {"type": "string"},
-      "changed_files": {"type": "array", "items": {"type": "string"}}
-    }
-  },
-  "output_schema": {           // JSON Schema for QA output (required)
-    "type": "object",
-    "properties": {
-      "status": {"enum": ["pass", "fail", "stop"]},
-      "message": {"type": "string"},
-      "details": {"type": "object"}
-    },
-    "required": ["status", "message"]
-  }
+  "status": "pass|fail|stop",  // Required: validation result
+  "message": "string",          // Required: human-readable summary
+  "details": {}                 // Optional: agent-specific details
 }
 ```
 
@@ -187,6 +206,62 @@ The **beads-mason agent** is responsible for parsing phase/sprint numbers and ge
 - `pass` - Validation succeeded, continue to next step
 - `fail` - Validation failed, dev agent should fix and retry
 - `stop` - Critical failure, do not retry (e.g., security vulnerability)
+
+---
+
+### Deprecated Fields (Pre-4.1a)
+
+**The following fields are deprecated as of Sprint 4.1a and replaced by AgentSpec**:
+
+| Deprecated Field | Replaced By | Migration Notes |
+|-----------------|-------------|-----------------|
+| `dev_agent_path` | `dev_agents[0].agent` | Move to AgentSpec with role="polecat" |
+| `dev_model` | `dev_agents[0].model` | Use model resolution priority |
+| `agent_type` | `dev_agents[0].role` | Map to "polecat" for workers |
+| `qa_agents[].agent_path` | `qa_agents[].agent` | Rename field in AgentSpec |
+| `qa_agents[].agent_type` | `qa_agents[].role` | Use "polecat" for ephemeral QA |
+
+**Migration Example**:
+
+Old schema (pre-4.1a):
+```json
+{
+  "dev_agent_path": ".claude/agents/backend-dev",
+  "dev_model": "sonnet",
+  "qa_agents": [
+    {
+      "agent_path": ".claude/agents/qa-unit-tests",
+      "model": "haiku",
+      "agent_type": "qa"
+    }
+  ]
+}
+```
+
+New schema (4.1a+):
+```json
+{
+  "scrum_master_agent": {
+    "role": "polecat",
+    "agent": ".claude/agents/beads-ralph-scrum-master.md",
+    "model": "sonnet"
+  },
+  "dev_agents": [
+    {
+      "role": "polecat",
+      "agent": ".claude/agents/backend-dev.md",
+      "model": "sonnet"
+    }
+  ],
+  "qa_agents": [
+    {
+      "role": "polecat",
+      "agent": ".claude/agents/qa-unit-tests.md",
+      "model": "haiku"
+    }
+  ]
+}
+```
 
 ### Retry Logic
 
@@ -286,11 +361,24 @@ The **beads-mason agent** is responsible for parsing phase/sprint numbers and ge
     "source_branch": "main",
     "phase": "1",
     "sprint": "1.2",
+    "team_name": "sprint-1-2-auth",
     "plan_file": "plans/feature-auth.md",
     "plan_section": "## Phase 1 > ### Sprint 1.2: User Authentication",
     "plan_sprint_id": "1.2",
-    "dev_agent_path": ".claude/agents/backend-dev",
-    "dev_model": "sonnet",
+    "scrum_master_agent": {
+      "role": "polecat",
+      "agent": ".claude/agents/beads-ralph-scrum-master.md",
+      "model": "sonnet",
+      "context": "Sprint 1.2 - User authentication API"
+    },
+    "dev_agents": [
+      {
+        "role": "polecat",
+        "agent": ".claude/agents/backend-dev.md",
+        "model": "sonnet",
+        "context": "Implement authentication API endpoints"
+      }
+    ],
     "dev_prompts": [
       "Implement user authentication API endpoints in the backend service.",
       "Follow existing patterns in services/auth/. Use bcrypt for password hashing.",
@@ -299,43 +387,16 @@ The **beads-mason agent** is responsible for parsing phase/sprint numbers and ge
     ],
     "qa_agents": [
       {
-        "agent_path": ".claude/agents/qa-unit-tests",
+        "role": "polecat",
+        "agent": ".claude/agents/qa-unit-tests.md",
         "model": "haiku",
-        "prompt": "Run pytest with coverage. Verify new endpoints have >80% coverage.",
-        "output_schema": {
-          "type": "object",
-          "properties": {
-            "status": {"enum": ["pass", "fail", "stop"]},
-            "message": {"type": "string"},
-            "coverage_percent": {"type": "number"}
-          },
-          "required": ["status", "message"]
-        }
+        "context": "Run pytest with coverage for auth endpoints"
       },
       {
-        "agent_path": ".claude/agents/qa-security-scan",
+        "role": "polecat",
+        "agent": ".claude/agents/qa-security-scan.md",
         "model": "sonnet",
-        "prompt": "Run bandit security scanner. Check for SQL injection, hardcoded secrets, and password handling issues.",
-        "output_schema": {
-          "type": "object",
-          "properties": {
-            "status": {"enum": ["pass", "fail", "stop"]},
-            "message": {"type": "string"},
-            "vulnerabilities": {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "severity": {"type": "string"},
-                  "issue": {"type": "string"},
-                  "file": {"type": "string"},
-                  "line": {"type": "number"}
-                }
-              }
-            }
-          },
-          "required": ["status", "message"]
-        }
+        "context": "Security scan for authentication code"
       }
     ],
     "max_retry_attempts": 3,
@@ -373,6 +434,7 @@ The **beads-mason agent** is responsible for parsing phase/sprint numbers and ge
     "source_branch": "main",
     "phase": "1",
     "sprint": "1.3",
+    "team_name": "sprint-1-3-merge",
     "plan_file": "plans/feature-auth.md",
     "plan_section": "## Phase 1 > ### Sprint 1.3: Integration",
     "plan_sprint_id": "1.3",
@@ -380,8 +442,20 @@ The **beads-mason agent** is responsible for parsing phase/sprint numbers and ge
       "main/1-2a-auth-api",
       "main/1-2b-user-profile"
     ],
-    "dev_agent_path": ".claude/agents/merge-specialist",
-    "dev_model": "sonnet",
+    "scrum_master_agent": {
+      "role": "polecat",
+      "agent": ".claude/agents/beads-ralph-scrum-master.md",
+      "model": "sonnet",
+      "context": "Sprint 1.3 - Merge auth and profile branches"
+    },
+    "dev_agents": [
+      {
+        "role": "polecat",
+        "agent": ".claude/agents/merge-specialist.md",
+        "model": "sonnet",
+        "context": "Merge parallel auth branches"
+      }
+    ],
     "dev_prompts": [
       "Merge branches main/1-2a-auth-api and main/1-2b-user-profile into main/1-3-merge",
       "Resolve any merge conflicts carefully, preserving functionality from both branches",
@@ -390,25 +464,10 @@ The **beads-mason agent** is responsible for parsing phase/sprint numbers and ge
     ],
     "qa_agents": [
       {
-        "agent_path": ".claude/agents/qa-integration-tests",
+        "role": "polecat",
+        "agent": ".claude/agents/qa-integration-tests.md",
         "model": "sonnet",
-        "prompt": "Run full integration test suite. Verify auth and profile features work together.",
-        "output_schema": {
-          "type": "object",
-          "properties": {
-            "status": {"enum": ["pass", "fail", "stop"]},
-            "message": {"type": "string"},
-            "test_results": {
-              "type": "object",
-              "properties": {
-                "total": {"type": "number"},
-                "passed": {"type": "number"},
-                "failed": {"type": "number"}
-              }
-            }
-          },
-          "required": ["status", "message"]
-        }
+        "context": "Integration tests for merged auth features"
       }
     ],
     "max_retry_attempts": 3,
@@ -687,7 +746,7 @@ All beads-ralph beads MUST have:
    - `issue_type` (`beads-ralph-work` or `beads-ralph-merge`)
    - `assignee` (set to `beads-ralph-scrum-master`)
 
-2. **Metadata Fields**:
+2. **Metadata Fields** (Sprint 4.1a+):
    - `worktree_path` (valid absolute path)
    - `branch` (valid branch name)
    - `source_branch` (non-empty)
@@ -697,21 +756,24 @@ All beads-ralph beads MUST have:
    - `plan_file` (path to plan file)
    - `plan_section` (section identifier in plan)
    - `plan_sprint_id` (sprint ID as in plan)
-   - `dev_agent_path` (valid path to agent file - MUST exist in `.claude/agents/`)
-   - `dev_model` (one of: "sonnet", "opus", "haiku")
+   - `scrum_master_agent` (valid AgentSpec object)
+   - `dev_agents` (non-empty array of valid AgentSpec objects)
    - `dev_prompts` (non-empty array)
-   - `agent_type` (one of: "dev", "qa", "code-review", "merge", "docs")
-   - `qa_agents` (non-empty array of valid QAAgent objects)
+   - `qa_agents` (non-empty array of valid AgentSpec objects)
 
-3. **QA Agent Validation**:
-   - Each QA agent MUST have: `agent_path`, `model`, `prompt`, `agent_type`, `output_schema`
-   - `agent_path` MUST exist in `.claude/agents/` directory (validated at review time)
-   - `agent_type` MUST be one of: "qa", "code-review", "security-scan", "lint", "integration-test"
-   - `output_schema` MUST define `status` field with enum ["pass", "fail", "stop"]
-   - `output_schema` MUST define `message` field
+3. **AgentSpec Validation**:
+   - Each AgentSpec MUST have: `role`, `agent`
+   - `role` MUST be one of: "polecat", "witness", "mayor"
+   - `agent` MUST exist in `.claude/agents/` directory (validated at review time)
+   - `model` (optional) MUST be one of: "sonnet", "opus", "haiku" (if provided)
+   - `executable` (optional) defaults to "claude"
+   - `options` (optional) uses system defaults if omitted
+   - `context` (optional) human-readable description
+   - `agent_id` (optional) populated at runtime for session tracking
+   - `env` (optional) additional environment variables
 
 4. **Agent Path Validation Rules**:
-   - **At bead creation**: beads-mason MUST check that agent paths exist
+   - **At bead creation**: beads-mason MUST check that `agent` paths exist
    - **Validation tool**: `scripts/validate-bead-schema.py` checks file existence
    - **Default agents**: "claude" is valid without file (default Claude agent)
    - **Custom agents**: Must be `.md` files in `.claude/agents/` directory
