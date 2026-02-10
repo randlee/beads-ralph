@@ -1,0 +1,126 @@
+# beads-ralph Configuration Example
+# Copy this file to beads-ralph.yaml and customize for your environment
+
+# ==================== Ralph Loop Settings ====================
+
+# Maximum number of concurrent scrum-master sessions
+# Default: 4
+max_parallel_sessions: 4
+
+# How often to poll for new ready beads (duration: s, m, h)
+# Default: 30s
+poll_interval: 30s
+
+# ==================== Timeout Settings ====================
+
+# Maximum time for scrum-master agent execution
+# Default: 15m
+scrum_master_timeout: 15m
+
+# Maximum time for dev agent execution
+# Default: 30m
+dev_agent_timeout: 30m
+
+# Maximum time for QA agent execution
+# Default: 10m
+qa_agent_timeout: 10m
+
+# ==================== Retry Settings ====================
+
+# Maximum number of dev-QA retry attempts per bead
+# Default: 3
+max_retry_attempts: 3
+
+# Maximum number of PR creation retry attempts
+# Default: 3
+pr_creation_retries: 3
+
+# ==================== Worktree Settings ====================
+
+# Repository name (REQUIRED)
+# This is the name of your project repository
+repo_name: beads-ralph
+
+# Source branch for creating worktrees
+# Default: develop
+source_branch: develop
+
+# Whether to delete worktrees after successful PR creation
+# Default: false (keep worktrees for debugging)
+cleanup_on_complete: false
+
+# ==================== Disk Space Checks ====================
+
+# Minimum free disk space in GB before creating new worktrees
+# Default: 5
+min_free_gb: 5
+
+# Check disk space before starting each scrum session
+# Default: false
+check_before_start: true
+
+# ==================== Network Settings ====================
+
+# Maximum number of network operation retries (git push, PR creation)
+# Default: 3
+max_network_retries: 3
+
+# Retry backoff strategy: exponential, linear, or constant
+# Default: exponential
+retry_backoff: exponential
+
+# Network operation timeout (duration: s, m, h)
+# Default: 30s
+network_timeout: 30s
+
+# ==================== Agent Defaults ====================
+# These settings provide system-wide defaults for agent execution
+# Compatible with gastown agent coordination system
+
+agent_defaults:
+  # Default model if not specified in agent spec
+  # Options: opus, sonnet, haiku
+  # Default: sonnet
+  default_model: sonnet
+
+  # Default executable for launching agents
+  # Default: claude
+  default_executable: claude
+
+  # Default CLI options passed to all agent invocations
+  # Default: ["--dangerously-skip-permissions", "--output-format", "json"]
+  default_options:
+    - "--dangerously-skip-permissions"
+    - "--output-format"
+    - "json"
+
+  # Role-based model overrides (gastown compatibility)
+  # Maps agent roles to preferred models
+  # Optional: only specify if you want role-specific model selection
+  role_models:
+    polecat: opus     # Orchestrator agents use Opus for complex planning
+    witness: haiku    # Observer agents use Haiku for fast validation
+    mayor: sonnet     # Coordinator agents use Sonnet for balanced work
+
+# ==================== Example Configurations ====================
+
+# High-parallelism setup (powerful workstation):
+# max_parallel_sessions: 8
+# min_free_gb: 20
+
+# Conservative setup (laptop):
+# max_parallel_sessions: 2
+# cleanup_on_complete: true
+# min_free_gb: 10
+
+# CI/CD environment:
+# max_parallel_sessions: 2
+# cleanup_on_complete: true
+# check_before_start: true
+# max_network_retries: 5
+
+# Development/debugging:
+# max_parallel_sessions: 1
+# cleanup_on_complete: false
+# scrum_master_timeout: 60m
+# dev_agent_timeout: 120m
