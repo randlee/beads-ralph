@@ -229,16 +229,18 @@ func TestClaimBeadWithRetryExponentialBackoff(t *testing.T) {
 	var mockBdScript string
 
 	if runtime.GOOS == "windows" {
+		// Use a simpler approach for Windows - write/read count to file
 		mockBdScript = fmt.Sprintf(`@echo off
+setlocal enabledelayedexpansion
 set count_file=%s
 set count=0
 if exist "%%count_file%%" (
     set /p count=<"%%count_file%%"
 )
-set /a count=%%count%% + 1
-echo %%count%%>"%%count_file%%"
+set /a count=!count! + 1
+echo !count!>"%%count_file%%"
 
-if %%count%% LEQ 2 (
+if !count! LEQ 2 (
     echo network error 1>&2
     exit /b 1
 )
@@ -342,8 +344,9 @@ func TestClaimBeadContextCancellation(t *testing.T) {
 	// Mock that takes a long time (never actually completes)
 	var mockBdScript string
 	if runtime.GOOS == "windows" {
+		// Use ping as a sleep alternative that respects termination better
 		mockBdScript = `@echo off
-timeout /t 10 /nobreak >nul
+ping -n 11 127.0.0.1 >nul
 exit /b 0
 `
 	} else {
