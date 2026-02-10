@@ -82,18 +82,7 @@ func RalphLoop(ctx context.Context, config Config) error {
 	return nil
 }
 
-// runScrumMaster launches a single scrum-master session for one bead
-// This is a placeholder for Sprint 4.1 - full implementation comes in Sprint 4.2
-func runScrumMaster(ctx context.Context, bead Bead, config Config) ScrumResult {
-	log.Printf("TODO: Launch scrum-master for bead %s (team: %s)", bead.ID, bead.Metadata.TeamName)
-
-	// Placeholder implementation
-	return ScrumResult{
-		BeadID:  bead.ID,
-		Success: false,
-		Error:   "runScrumMaster not yet implemented (Sprint 4.2)",
-	}
-}
+// runScrumMaster is implemented in scrum_master.go
 
 // processResults processes all scrum-master results
 // Returns (allSuccess, fatalError)
